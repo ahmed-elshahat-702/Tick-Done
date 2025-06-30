@@ -55,7 +55,9 @@ export function TaskDashboard() {
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-4 md:p-6">{renderContent()}</div>
+        <div className="max-md:mt-18 flex-1 overflow-auto p-4 md:p-6">
+          {renderContent()}
+        </div>
 
         {/* Floating Add Task Button */}
         <Button

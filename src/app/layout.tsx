@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/layout/theme-provider";
 // import { AuthProvider } from "@/components/layout/auth-provider";
 import { ErrorBoundary } from "@/components/layout/error-boundary";
 import { Toaster } from "sonner";
+import { SessionProvider } from "next-auth/react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,12 +38,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* <AuthProvider> */}
-          <ErrorBoundary>
-            {children}
-            <Toaster />
-          </ErrorBoundary>
-          {/* </AuthProvider> */}
+          <SessionProvider>
+            <ErrorBoundary>
+              {children}
+              <Toaster />
+            </ErrorBoundary>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

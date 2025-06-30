@@ -1,23 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Calendar,
   CheckCircle,
   Home,
-  User,
+  LogOut,
+  Menu,
   Moon,
   Sun,
-  // LogOut,
-  Menu,
+  User,
   X,
 } from "lucide-react";
-// import { signOut, useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
-// import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import { useState } from "react";
+import Logo from "./logo";
 
 interface SidebarProps {
   activeView: string;
@@ -33,20 +34,20 @@ const navigation = [
 
 export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
-  // const { data: session, status } = useSession();
+  const { data: session, status } = useSession();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  // const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // const handleSignOut = async () => {
-  //   try {
-  //     setIsSigningOut(true);
-  //     await signOut({ callbackUrl: "/auth/signin" });
-  //   } catch (error) {
-  //     console.error("Sign out error:", error);
-  //   } finally {
-  //     setIsSigningOut(false);
-  //   }
-  // };
+  const handleSignOut = async () => {
+    try {
+      setIsSigningOut(true);
+      await signOut({ callbackUrl: "/auth/signin" });
+    } catch (error) {
+      console.error("Sign out error:", error);
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   const handleViewChange = (view: string) => {
     onViewChange(view);
@@ -58,9 +59,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <CheckCircle className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <Logo />
           <h1 className="font-semibold text-lg">Tick Done</h1>
         </div>
       </div>
@@ -110,7 +109,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
           Profile
         </Button>
 
-        {/* <Button
+        <Button
           variant="ghost"
           className="w-full justify-start gap-3 h-10 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
           onClick={handleSignOut}
@@ -122,10 +121,10 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
             <LogOut className="w-4 h-4" />
           )}
           {isSigningOut ? "Signing out..." : "Sign out"}
-        </Button>*/}
+        </Button>
 
         {/* User Info */}
-        {/* {status === "loading" ? (
+        {status === "loading" ? (
           <div className="flex items-center gap-3 p-2">
             <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
             <div className="flex-1 space-y-1">
@@ -150,7 +149,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
               </p>
             </div>
           </div>
-        )}  */}
+        )}
       </div>
     </>
   );
@@ -158,18 +157,20 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   return (
     <>
       {/* Mobile Menu Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-      >
-        {isMobileOpen ? (
-          <X className="h-5 w-5" />
-        ) : (
-          <Menu className="h-5 w-5" />
-        )}
-      </Button>
+      <div className="md:hidden w-full h-16 mx-auto px-6 bg-background fixed top-0 left-0 flex items-center justify-between shadow-sm">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+        >
+          {isMobileOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Menu className="h-6 w-6" />
+          )}
+        </Button>
+        <h1 className="font-semibold text-base">Tick Done</h1>
+      </div>
 
       {/* Mobile Overlay */}
       {isMobileOpen && (
