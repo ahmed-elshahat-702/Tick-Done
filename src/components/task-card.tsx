@@ -13,14 +13,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTaskStore, type Task } from "@/lib/store";
+import { useTaskStore } from "@/lib/store";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { TTask } from "@/types/task";
+import { deleteTask } from "@/actions/tasks";
 
 interface TaskCardProps {
-  task: Task;
+  task: TTask;
 }
 
 const priorityColors = {
@@ -38,16 +40,21 @@ const statusColors = {
 };
 
 export function TaskCard({ task }: TaskCardProps) {
-  const { updateTask, deleteTask, isLoading } = useTaskStore();
+  const {
+    // updateTask,
+    removeTask,
+    isHandling,
+    setIsHandling,
+  } = useTaskStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleStatusChange = async (checked: boolean) => {
     try {
       setIsUpdating(true);
-      await updateTask(task.id, {
-        status: checked ? "done" : "todo",
-      });
+      // await updateTask(task._id, {
+      //   status: checked ? "done" : "todo",
+      // });
       toast(
         checked
           ? "Great job on completing this task."
@@ -63,11 +70,18 @@ export function TaskCard({ task }: TaskCardProps) {
 
   const handleDelete = async () => {
     try {
-      await deleteTask(task.id);
-      toast("The task has been removed successfully.");
+      setIsHandling(true);
+      const res = await deleteTask(task._id);
+      if (res?.error) {
+        toast(res.error);
+      }
+      await removeTask(task._id);
+      toast(res?.success);
     } catch (error) {
       toast(`Failed to delete task status. Please try again.`);
       console.error(error);
+    } finally {
+      setIsHandling(false);
     }
   };
 
@@ -82,7 +96,7 @@ export function TaskCard({ task }: TaskCardProps) {
           "transition-all hover:shadow-md",
           task.status === "done" && "opacity-60",
           isOverdue && "border-red-200 dark:border-red-800",
-          (isLoading || isUpdating) && "opacity-50"
+          (isHandling || isUpdating) && "opacity-50"
         )}
       >
         <CardContent className="p-4">
@@ -92,7 +106,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 checked={task.status === "done"}
                 onCheckedChange={handleStatusChange}
                 className="mt-1"
-                disabled={isLoading || isUpdating}
+                disabled={isHandling || isUpdating}
               />
               {isUpdating && (
                 <LoadingSpinner className="absolute inset-0 h-4 w-4" />
@@ -117,7 +131,7 @@ export function TaskCard({ task }: TaskCardProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 flex-shrink-0"
-                      disabled={isLoading}
+                      disabled={isHandling}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>

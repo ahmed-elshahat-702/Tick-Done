@@ -3,14 +3,13 @@
 import { TaskCard } from "@/components/task-card";
 import { useTaskStore } from "@/lib/store";
 import { isToday } from "date-fns";
-import { LoadingSpinner } from "@/components/layout/loading-spinner";
 
 interface TaskListProps {
   view: string;
 }
 
 export function TaskList({ view }: TaskListProps) {
-  const { tasks, isLoading } = useTaskStore();
+  const { tasks } = useTaskStore();
 
   const filteredTasks = tasks.filter((task) => {
     switch (view) {
@@ -34,17 +33,6 @@ export function TaskList({ view }: TaskListProps) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center space-y-4">
-          <LoadingSpinner className="h-8 w-8 mx-auto" />
-          <p className="text-muted-foreground">Loading tasks...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -56,7 +44,7 @@ export function TaskList({ view }: TaskListProps) {
 
       <div className="grid gap-4">
         {filteredTasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard key={`${task._id}`} task={task} />
         ))}
 
         {filteredTasks.length === 0 && (

@@ -1,19 +1,15 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { createTask } from "@/actions/tasks";
+import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -22,6 +18,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -29,41 +31,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { useTaskStore, type Task } from "@/lib/store";
-import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { useTaskStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { TTask } from "@/types/task";
+import { TaskFormData, taskSchema } from "@/validation/Task";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-
-const taskSchema = z.object({
-  title: z
-    .string()
-    .min(1, "Title is required")
-    .max(100, "Title must be less than 100 characters"),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional(),
-  priority: z.enum(["low", "medium", "high"]),
-  dueDate: z.date().optional(),
-  tag: z.string().max(20, "Tag must be less than 20 characters").optional(),
-});
-
-type TaskFormData = z.infer<typeof taskSchema>;
 
 interface AddTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: Task;
+  task?: TTask;
 }
 
 export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
-  const { addTask, updateTask, isLoading } = useTaskStore();
+  const {
+    addTask,
+    //  updateTask,
+    isHandling,
+    setIsHandling,
+  } = useTaskStore();
   const isEditing = !!task;
 
   const form = useForm<TaskFormData>({
@@ -80,17 +71,28 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
   const onSubmit = async (data: TaskFormData) => {
     try {
       if (isEditing && task) {
-        await updateTask(task.id, {
-          ...data,
-          dueDate: data.dueDate?.toISOString(),
-        });
+        // await updateTask(task._id, {
+        //   ...data,
+        //   dueDate: data.dueDate,
+        // });
         toast("Your task has been updated successfully.");
       } else {
-        await addTask({
-          ...data,
-          dueDate: data.dueDate?.toISOString(),
-        });
-        toast("Your new task has been added successfully.");
+        try {
+          setIsHandling(true);
+          const res = await createTask(data);
+          if (res?.error) {
+            toast(res.error);
+          }
+          if (res?.success && res?.task) {
+            addTask(res.task);
+            toast(res.success);
+          }
+        } catch (error) {
+          console.error("Failed to add task:", error);
+          toast("Failed to add task");
+        } finally {
+          setIsHandling(false);
+        }
       }
 
       form.reset();
@@ -102,7 +104,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
   };
 
   const handleClose = () => {
-    if (!isLoading) {
+    if (!isHandling) {
       form.reset();
       onOpenChange(false);
     }
@@ -126,7 +128,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                   <FormControl>
                     <Input
                       placeholder="Enter task title..."
-                      disabled={isLoading}
+                      disabled={isHandling}
                       {...field}
                     />
                   </FormControl>
@@ -146,7 +148,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                       placeholder="Enter task description..."
                       className="resize-none"
                       rows={3}
-                      disabled={isLoading}
+                      disabled={isHandling}
                       {...field}
                     />
                   </FormControl>
@@ -165,7 +167,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      disabled={isLoading}
+                      disabled={isHandling}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -198,7 +200,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                               "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
-                            disabled={isLoading}
+                            disabled={isHandling}
                           >
                             {field.value ? (
                               format(field.value, "PPP")
@@ -236,7 +238,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                   <FormControl>
                     <Input
                       placeholder="Enter tag (optional)..."
-                      disabled={isLoading}
+                      disabled={isHandling}
                       {...field}
                     />
                   </FormControl>
@@ -250,17 +252,17 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                 type="button"
                 variant="outline"
                 onClick={handleClose}
-                disabled={isLoading}
+                disabled={isHandling}
                 className="w-full sm:w-auto bg-transparent"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isHandling}
                 className="w-full sm:w-auto"
               >
-                {isLoading ? (
+                {isHandling ? (
                   <>
                     <LoadingSpinner className="mr-2 h-4 w-4" />
                     {isEditing ? "Updating..." : "Adding..."}

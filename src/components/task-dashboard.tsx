@@ -15,11 +15,24 @@ import { toast } from "sonner";
 export function TaskDashboard() {
   const [activeView, setActiveView] = useState("dashboard");
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const { isLoading, error, initializeTasks } = useTaskStore();
+  const { isLoading, setIsLoading, error, setTasks } = useTaskStore();
 
   useEffect(() => {
-    initializeTasks();
-  }, [initializeTasks]);
+    const fetchTasks = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch("/api/tasks");
+        const data = await res.json();
+        setTasks(data.tasks);
+      } catch (error) {
+        console.error("Failed to fetch tasks", error);
+        toast("Failed to fetch tasks");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTasks();
+  }, [setIsLoading, setTasks]);
 
   useEffect(() => {
     if (error) {
