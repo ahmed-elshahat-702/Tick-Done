@@ -14,13 +14,10 @@ interface TaskStore {
   error: string | null;
   setTasks: (newTasks: TTask[]) => void;
   addTask: (task: TTask) => void;
-  // updateTask: (id: string, updates: Partial<TTask>) => Promise<void>;
+  editTask: (id: ObjectId, data: Partial<TTask>) => Promise<void>;
   removeTask: (id: ObjectId) => Promise<void>;
   clearError: () => void;
 }
-
-// Simulate API delay
-// const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const useTaskStore = create<TaskStore>()(
   persist(
@@ -43,27 +40,13 @@ export const useTaskStore = create<TaskStore>()(
         set((state) => ({ tasks: [task, ...state.tasks] }));
       },
 
-      // updateTask: async (id, updates) => {
-      //   try {
-      //     set({ isLoading: true, error: null });
-      //     await delay(300); // Simulate API call
-
-      //     set((state) => ({
-      //       tasks: state.tasks.map((task) =>
-      //         task.id === id
-      //           ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-      //           : task
-      //       ),
-      //       isLoading: false,
-      //     }));
-      //   } catch (error) {
-      //     set({
-      //       error: `Failed to update tasks. Please try again`,
-      //       isLoading: false,
-      //     });
-      //     console.error(error);
-      //   }
-      // },
+      editTask: async (id, data) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            task._id === id ? { ...task, ...data, updatedAt: new Date() } : task
+          ),
+        }));
+      },
 
       removeTask: async (id) => {
         set((state) => ({

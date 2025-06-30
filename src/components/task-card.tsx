@@ -19,7 +19,7 @@ import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { TTask } from "@/types/task";
-import { deleteTask } from "@/actions/tasks";
+import { deleteTask, updateTaskStatus } from "@/actions/tasks";
 
 interface TaskCardProps {
   task: TTask;
@@ -40,26 +40,27 @@ const statusColors = {
 };
 
 export function TaskCard({ task }: TaskCardProps) {
-  const {
-    // updateTask,
-    removeTask,
-    isHandling,
-    setIsHandling,
-  } = useTaskStore();
+  const { editTask, removeTask, isHandling, setIsHandling } = useTaskStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleStatusChange = async (checked: boolean) => {
     try {
       setIsUpdating(true);
-      // await updateTask(task._id, {
-      //   status: checked ? "done" : "todo",
-      // });
-      toast(
-        checked
-          ? "Great job on completing this task."
-          : "Task moved back to todo."
-      );
+      const res = await updateTaskStatus(task._id, checked ? "done" : "todo");
+      if (res?.error) {
+        toast(res.error);
+      }
+      if (res?.success && res?.task) {
+        await editTask(task._id, {
+          status: checked ? "done" : "todo",
+        });
+        toast(
+          checked
+            ? "Great job on completing this task."
+            : "Task moved back to todo."
+        );
+      }
     } catch (error) {
       toast(`Failed to update task status. Please try again.`);
       console.error(error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { createTask } from "@/actions/tasks";
+import { createTask, UpdateTask } from "@/actions/tasks";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,12 +49,7 @@ interface AddTaskModalProps {
 }
 
 export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
-  const {
-    addTask,
-    //  updateTask,
-    isHandling,
-    setIsHandling,
-  } = useTaskStore();
+  const { addTask, editTask, isHandling, setIsHandling } = useTaskStore();
   const isEditing = !!task;
 
   const form = useForm<TaskFormData>({
@@ -71,11 +66,37 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
   const onSubmit = async (data: TaskFormData) => {
     try {
       if (isEditing && task) {
-        // await updateTask(task._id, {
-        //   ...data,
-        //   dueDate: data.dueDate,
-        // });
-        toast("Your task has been updated successfully.");
+        try {
+          setIsHandling(true);
+          const res = await UpdateTask(task._id, {
+            ...data,
+            dueDate: data.dueDate,
+          });
+          if (res?.error) {
+            toast(res.error);
+          }
+          if (res?.success && res?.task) {
+            await editTask(task._id, {
+              ...data,
+              dueDate: data.dueDate,
+            });
+            toast(res.success);
+            form.reset({
+              title: res?.task?.title || "",
+              description: res?.task?.description || "",
+              priority: res?.task?.priority || "medium",
+              dueDate: res?.task?.dueDate
+                ? new Date(res?.task.dueDate)
+                : undefined,
+              tag: res?.task?.tag || "",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to update task:", error);
+          toast("Failed to update task");
+        } finally {
+          setIsHandling(false);
+        }
       } else {
         try {
           setIsHandling(true);
@@ -94,7 +115,6 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
           setIsHandling(false);
         }
       }
-
       form.reset();
       onOpenChange(false);
     } catch (error) {

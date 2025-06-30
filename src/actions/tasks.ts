@@ -34,33 +34,124 @@ export async function createTask(taskData: TaskFormData) {
 
     if (isExisting) {
       return { error: "Task with this title already exist." };
-    } else {
-      // Create task
-      const task = await Task.create({
-        ...taskData,
-        // Trim title
-        title: trimTitle(taskData.title),
-        userId: user._id,
-      });
-
-      revalidatePath("/");
-
-      return {
-        success: "Task created successfully!",
-        task: toPlainObject<TTask>(task),
-      };
     }
+    // Create task
+    const task = await Task.create({
+      ...taskData,
+      // Trim title
+      title: trimTitle(taskData.title),
+      userId: user._id,
+    });
+
+    revalidatePath("/");
+
+    return {
+      success: "Task created successfully!",
+      task: toPlainObject<TTask>(task),
+    };
   } catch (error) {
     console.error("Failed to add new task:", error);
   }
 }
 
-export async function deleteTask(TaskId: ObjectId) {
+export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
   try {
-    const task = await Task.findByIdAndDelete(TaskId);
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!taskId) {
+      return { error: "Task ID is required." };
+    }
+
+    await connectDB();
+
+    // Check for existing task with the same title
+    const isExisting = await Task.findOne({ title: taskData.title });
+
+    if (isExisting && isExisting._id != taskId) {
+      console.log(isExisting._id);
+      console.log(taskId);
+      return { error: "Task with this title already exist." };
+    }
+    const task = await Task.findByIdAndUpdate(
+      taskId,
+      {
+        ...taskData,
+        title: trimTitle(taskData.title),
+      },
+      { new: true }
+    );
+
     if (!task) {
       return { error: "Task not found!" };
     }
+
+    revalidatePath("/");
+
+    return {
+      success: "Task updated successfully!",
+      task: toPlainObject<TTask>(task),
+    };
+  } catch (error) {
+    console.error("Failed to update task:", error);
+  }
+}
+
+export async function updateTaskStatus(
+  taskId: ObjectId,
+  status: TTask["status"]
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!taskId) {
+      return { error: "Task ID is required." };
+    }
+
+    await connectDB();
+    const task = await Task.findByIdAndUpdate(
+      taskId,
+      { status },
+      { new: true }
+    );
+
+    if (!task) {
+      return { error: "Task not found!" };
+    }
+
+    revalidatePath("/");
+
+    return {
+      success: "Task updated successfully!",
+      task: toPlainObject<TTask>(task),
+    };
+  } catch (error) {
+    console.error("Failed to update task:", error);
+  }
+}
+
+export async function deleteTask(taskId: ObjectId) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    await connectDB();
+    const task = await Task.findByIdAndDelete(taskId);
+    if (!task) {
+      return { error: "Task not found!" };
+    }
+
+    revalidatePath("/");
     return { success: "Task deleted successfully" };
   } catch (error) {
     console.error("Failed to delete task:", error);
