@@ -56,25 +56,27 @@ export default function SignUpPage() {
     },
   });
 
-  const onSubmit = async () =>
-    // data: SignupFormData
-    {
-      try {
-        setIsLoading(true);
+  const onSubmit = async (data: SignupFormData) => {
+    try {
+      setIsLoading(true);
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      // if()
 
-        toast("You can now sign in with your credentials.");
+      await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      toast("You can now sign in with your credentials.");
 
-        router.push("/auth/signin");
-      } catch (error) {
-        toast("Failed to create account. Please try again.");
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      router.push("/auth/signin");
+    } catch (error) {
+      toast("Failed to create account. Please try again.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
