@@ -77,17 +77,34 @@ export function ProfileSettings() {
     res: ClientUploadedFileData<{ uploadedBy: string }>[] | undefined
   ) => {
     if (!res?.[0]?.url) return;
-    setImage(res[0].url);
+    const newImageUrl = res[0].url;
+    const oldImageUrl = image;
+
+    setImage(newImageUrl);
     setIsSaving(true);
     setError("");
     try {
+      // Edit user data
       const resp = await fetch("/api/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, image: res[0].url }),
+        body: JSON.stringify({ name, image: newImageUrl }),
       });
       if (!resp.ok) throw new Error("Failed to update profile");
-      await update({ name, image: res[0].url }); // Pass updated fields
+
+      await update({ name, image: newImageUrl }); // Pass updated fields
+
+      // Remove old image from UploadThing if it exists and is an UploadThing URL
+      if (oldImageUrl && oldImageUrl.startsWith("https://utfs.io/f/")) {
+        const fileKey = oldImageUrl.split("/f/")[1]?.split("?")[0];
+        if (fileKey) {
+          await fetch("/api/uploadthing/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileKey }),
+          });
+        }
+      }
       setIsEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -101,6 +118,18 @@ export function ProfileSettings() {
     setIsDeleting(true);
     setError("");
     try {
+      // Remove current image from UploadThing if it's an UploadThing URL
+      if (image && image.startsWith("https://utfs.io/f/")) {
+        const fileKey = image.split("/f/")[1]?.split("?")[0];
+        if (fileKey) {
+          await fetch("/api/uploadthing/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileKey }),
+          });
+        }
+      }
+
       await Promise.all([
         fetch("/api/user", {
           method: "DELETE",
