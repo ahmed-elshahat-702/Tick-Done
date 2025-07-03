@@ -172,6 +172,14 @@ export default function SignInPage() {
             </form>
           </Form>
 
+          <div className="flex items-baseline my-6">
+            <div className="flex-grow border-t border-muted-foreground/20" />
+            <span className="mx-3 text-muted-foreground">or</span>
+            <div className="flex-grow border-t border-muted-foreground/20" />
+          </div>
+
+          {/* Google Sign-up */}
+
           <div className="mt-4 text-center">
             <Button
               variant="outline"
