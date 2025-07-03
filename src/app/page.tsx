@@ -12,20 +12,34 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/signin");
+      // Add a slight delay for smoother UX before redirect
+      setTimeout(() => {
+        router.push("/auth/signin");
+      }, 500);
     }
   }, [status, router]);
 
   if (status === "loading") {
     return (
-      <div className="w-full h-screen flex items-center justify-center">
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-50">
         <LoadingSpinner />
+        <p className="mt-4 text-gray-500 text-lg animate-pulse">
+          Loading your dashboard...
+        </p>
       </div>
     );
   }
 
+  // Check unauthenticated last
   if (status === "unauthenticated") {
-    return null;
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-50">
+        <LoadingSpinner />
+        <p className="mt-4 text-gray-500 text-lg animate-pulse">
+          Redirecting to sign in...
+        </p>
+      </div>
+    );
   }
 
   return <TaskDashboard />;

@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     await connectDB();
-    const tasks = await Task.find({ userId: session.user.id }).sort({
+    const tasks = await Task.find({ email: session.user.email }).sort({
       createdAt: -1,
     });
     return NextResponse.json({ tasks });

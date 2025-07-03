@@ -106,11 +106,13 @@ export function TaskCard({ task }: TaskCardProps) {
               <Checkbox
                 checked={task.status === "done"}
                 onCheckedChange={handleStatusChange}
-                className="mt-1"
-                disabled={isHandling || isUpdating}
+                className={`mt-1 ${
+                  isUpdating || isHandling ? "opacity-0" : ""
+                }`}
+                // disabled={isHandling || isUpdating}
               />
               {isUpdating && (
-                <LoadingSpinner className="absolute inset-0 h-4 w-4" />
+                <LoadingSpinner className="absolute inset-0 top-1 h-4 w-4" />
               )}
             </div>
 

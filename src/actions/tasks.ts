@@ -30,7 +30,10 @@ export async function createTask(taskData: TaskFormData) {
     const user = await User.findOne({ email: session.user.email });
 
     // Check for existing task with the same title
-    const isExisting = await Task.findOne({ title: taskData.title });
+    const isExisting = await Task.findOne({
+      title: taskData.title,
+      userId: user._id,
+    });
 
     if (isExisting) {
       return { error: "Task with this title already exist." };
@@ -68,12 +71,17 @@ export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
 
     await connectDB();
 
+    // Get user data
+    const user = await User.findOne({ email: session.user.email });
+
     // Check for existing task with the same title
-    const isExisting = await Task.findOne({ title: taskData.title });
+
+    const isExisting = await Task.findOne({
+      title: taskData.title,
+      userId: user._id,
+    });
 
     if (isExisting && isExisting._id != taskId) {
-      console.log(isExisting._id);
-      console.log(taskId);
       return { error: "Task with this title already exist." };
     }
     const task = await Task.findByIdAndUpdate(
