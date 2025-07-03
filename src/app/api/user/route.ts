@@ -18,3 +18,13 @@ export async function PATCH(req: Request) {
   );
   return NextResponse.json({ user: updated });
 }
+
+export async function DELETE() {
+  await dbConnect();
+  const session = await auth();
+  if (!session || !session.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  await User.findOneAndDelete({ email: session.user.email });
+  return NextResponse.json({ message: "Account deleted" });
+}
