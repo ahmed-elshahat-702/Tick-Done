@@ -5,13 +5,6 @@ import NextAuth, { AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
-export class InvalidLoginError extends AuthError {
-  constructor(message: string) {
-    super(message);
-    this.message = message;
-  }
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google({
@@ -43,7 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       authorize: async (credentials) => {
         try {
           if (!credentials?.email || !credentials?.password) {
-            throw new InvalidLoginError("Missing credentials");
+            throw new AuthError("Missing credentials");
           }
 
           await connectDB();
@@ -53,13 +46,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (!user) {
-            throw new InvalidLoginError("Invalid email or password");
+            throw new AuthError("User not found");
           }
 
-          if (!user.hashedPassword) {
-            throw new InvalidLoginError(
-              "This email is assigned to Google sign-in"
-            );
+          if (user.authProvider === "google") {
+            throw new AuthError("This email is assigned to Google sign-in");
           }
 
           const isValid = await compare(
@@ -68,7 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (!isValid) {
-            throw new InvalidLoginError("Invalid email or password");
+            throw new AuthError("Invalid password");
           }
 
           return {
@@ -78,9 +69,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             image: user.image,
           };
         } catch (error) {
-          throw error instanceof InvalidLoginError
-            ? error
-            : new InvalidLoginError("An error occurred during authentication");
+          throw new AuthError(
+            error instanceof AuthError
+              ? error.message
+              : "An error occurred during authentication"
+          );
         }
       },
     }),
@@ -97,36 +90,56 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       try {
         await connectDB();
         if (account?.provider === "google" && profile) {
-          let dbUser = await User.findOne({ email: profile.email }).select(
-            "+authProvider"
-          );
+          let dbUser = await User.findOne({ email: profile.email });
           if (!dbUser) {
             dbUser = await User.create({
               name: profile.name,
               email: profile.email,
               image: profile.picture,
-              authProvider: "google",
+              authProvider: "google", // Add authProvider to track Google users
             });
-          } else if (dbUser.authProvider === "credentials") {
-            throw new InvalidLoginError(
-              "This email is assigned to credentials sign-in"
+          } else {
+            // Update existing user if needed
+            await User.updateOne(
+              { email: profile.email },
+              {
+                name: profile.name,
+                image: profile.picture,
+                authProvider: "google",
+              }
             );
           }
+          // Ensure the user object is returned for session creation
           return true;
         }
         return true;
       } catch (error) {
-        throw error instanceof InvalidLoginError
-          ? error
-          : new InvalidLoginError("Failed to process Google sign-in");
+        console.error("Sign-in callback error:", error);
+        throw new AuthError(
+          error instanceof AuthError
+            ? error.message
+            : "Failed to process Google sign-in"
+        );
       }
     },
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id;
+      }
+      if (account?.provider === "google") {
+        // Fetch user from DB to ensure ID consistency
+        await connectDB();
+        const dbUser = await User.findOne({ email: token.email });
+        if (dbUser) {
+          token.id = dbUser._id.toString();
+        }
+      }
       return token;
     },
     async session({ session, token }) {
-      if (token) session.user.id = token.id as string;
+      if (token.id) {
+        session.user.id = token.id as string;
+      }
       return session;
     },
   },

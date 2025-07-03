@@ -95,6 +95,18 @@ export default function SignUpPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await signIn("google"); // No result to check since redirect happens
+    } catch (error) {
+      toast.error("An unexpected error occurred during Google sign-in.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -238,9 +250,7 @@ export default function SignUpPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={async () => {
-                await signIn("google");
-              }}
+              onClick={handleGoogleSignIn}
               disabled={isLoading}
             >
               <div className="relative w-5 h-5 mr-2">

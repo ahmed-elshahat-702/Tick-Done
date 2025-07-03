@@ -66,19 +66,8 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        switch (result.error) {
-          case "Missing credentials":
-            toast.error("Please provide both email and password.");
-            break;
-          case "User not found":
-            toast.error("No account found with this email.");
-            break;
-          case "Invalid password":
-            toast.error("Incorrect password. Please try again.");
-            break;
-          default:
-            toast.error("Authentication failed. Please try again.");
-        }
+        toast.error("Invalid credentials. Please try again.");
+        console.error(result.error);
       } else {
         toast.success("You have been signed in successfully.");
         router.push("/");
@@ -94,11 +83,7 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      const result = await signIn("google", { redirect: false });
-      if (result?.error) {
-        toast.error("Google sign-in failed. Please try again.");
-        console.error(result.error);
-      }
+      await signIn("google"); // No result to check since redirect happens
     } catch (error) {
       toast.error("An unexpected error occurred during Google sign-in.");
       console.error(error);

@@ -7,6 +7,7 @@ const UserSchema: Schema = new Schema<TUser>(
     email: { type: String, required: true, unique: true },
     image: { type: String, default: "" },
     hashedPassword: { type: String, required: false }, // Made optional for OAuth users
+    authProvider: { type: String, required: false },
   },
   {
     timestamps: true,

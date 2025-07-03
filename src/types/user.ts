@@ -6,6 +6,7 @@ export interface TUser {
   email: string;
   image?: string;
   hashedPassword?: string; // Made optional for OAuth users
+  authProvider?: string;
   createdAt: Date;
 }
 
