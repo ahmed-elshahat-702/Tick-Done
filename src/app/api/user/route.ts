@@ -1,11 +1,12 @@
 // app/api/user/route.ts
 import { NextResponse } from "next/server";
 import { User } from "@/models/User";
-import dbConnect from "@/lib/mongodb";
 import { auth } from "@/app/auth";
+import connectDB from "@/lib/mongodb";
 
 export async function PATCH(req: Request) {
-  await dbConnect();
+  await connectDB();
+
   const session = await auth();
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,7 +21,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE() {
-  await dbConnect();
+  await connectDB();
+
   const session = await auth();
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -30,9 +30,6 @@ interface AppJWT extends JWT {
   bio?: string | null;
 }
 
-// Connect to DB once at module level (if safe for your setup)
-connectDB();
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google({
@@ -71,6 +68,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!credentials?.email || !credentials?.password) {
           throw new AuthError("Missing credentials");
         }
+
+        await connectDB();
 
         const user = await User.findOne({ email: credentials.email }).select(
           "+hashedPassword +authProvider"
@@ -114,6 +113,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async signIn({ account, profile }) {
+      await connectDB();
+
       if (account?.provider === "google" && profile) {
         let dbUser = await User.findOne({ email: profile.email });
         if (!dbUser) {
@@ -150,6 +151,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         appToken.bio = (user as AppUser).bio;
       }
       if (account?.provider === "google") {
+        await connectDB();
+
         const dbUser = await User.findOne({ email: appToken.email });
         if (dbUser) {
           appToken.id = dbUser._id.toString();
@@ -173,6 +176,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       }
       if (session.user?.email) {
+        await connectDB();
+
         const dbUser = await User.findOne({ email: session.user.email });
         if (dbUser) {
           session.user = {
