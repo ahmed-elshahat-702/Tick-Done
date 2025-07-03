@@ -165,3 +165,24 @@ export async function deleteTask(taskId: ObjectId) {
     console.error("Failed to delete task:", error);
   }
 }
+
+export async function deleteUserTasks() {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    await connectDB();
+    const result = await Task.deleteMany({ userId: session.user.id });
+
+    revalidatePath("/");
+
+    return {
+      success: `Deleted ${result.deletedCount} tasks for user.`,
+    };
+  } catch (error) {
+    console.error("Failed to delete user tasks:", error);
+  }
+}

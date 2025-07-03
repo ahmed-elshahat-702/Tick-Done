@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
+import { deleteUserTasks } from "@/actions/tasks";
 
 export function ProfileSettings() {
   const [isEditing, setIsEditing] = useState(false);
@@ -100,11 +101,15 @@ export function ProfileSettings() {
     setIsDeleting(true);
     setError("");
     try {
-      const res = await fetch("/api/user", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error("Failed to delete account");
+      await Promise.all([
+        fetch("/api/user", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        }).then((res) => {
+          if (!res.ok) throw new Error("Failed to delete account");
+        }),
+        deleteUserTasks(),
+      ]);
       await signOut({ callbackUrl: "/auth/signin" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
