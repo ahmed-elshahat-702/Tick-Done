@@ -1,9 +1,16 @@
 import connectDB from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { compare } from "bcryptjs";
-import NextAuth from "next-auth";
+import NextAuth, { AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+
+export class InvalidLoginError extends AuthError {
+  constructor(message: string) {
+    super(message);
+    this.message = message;
+  }
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -34,29 +41,47 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            throw new InvalidLoginError("Missing credentials");
+          }
 
-        await connectDB();
+          await connectDB();
 
-        const user = await User.findOne({ email: credentials.email }).select(
-          "+hashedPassword"
-        );
+          const user = await User.findOne({ email: credentials.email }).select(
+            "+hashedPassword +authProvider"
+          );
 
-        if (!user) return null;
+          if (!user) {
+            throw new InvalidLoginError("Invalid email or password");
+          }
 
-        const isValid = await compare(
-          String(credentials.password),
-          user.hashedPassword as string
-        );
+          if (!user.hashedPassword) {
+            throw new InvalidLoginError(
+              "This email is assigned to Google sign-in"
+            );
+          }
 
-        if (!isValid) return null;
+          const isValid = await compare(
+            String(credentials.password),
+            user.hashedPassword as string
+          );
 
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
+          if (!isValid) {
+            throw new InvalidLoginError("Invalid email or password");
+          }
+
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          };
+        } catch (error) {
+          throw error instanceof InvalidLoginError
+            ? error
+            : new InvalidLoginError("An error occurred during authentication");
+        }
       },
     }),
   ],
@@ -69,19 +94,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async signIn({ account, profile }) {
-      await connectDB();
-      if (account?.provider === "google" && profile) {
-        let dbUser = await User.findOne({ email: profile.email });
-        if (!dbUser) {
-          dbUser = await User.create({
-            name: profile.name,
-            email: profile.email,
-            image: profile.picture,
-          });
+      try {
+        await connectDB();
+        if (account?.provider === "google" && profile) {
+          let dbUser = await User.findOne({ email: profile.email }).select(
+            "+authProvider"
+          );
+          if (!dbUser) {
+            dbUser = await User.create({
+              name: profile.name,
+              email: profile.email,
+              image: profile.picture,
+              authProvider: "google",
+            });
+          } else if (dbUser.authProvider === "credentials") {
+            throw new InvalidLoginError(
+              "This email is assigned to credentials sign-in"
+            );
+          }
+          return true;
         }
         return true;
+      } catch (error) {
+        throw error instanceof InvalidLoginError
+          ? error
+          : new InvalidLoginError("Failed to process Google sign-in");
       }
-      return true;
     },
     async jwt({ token, user }) {
       if (user) token.id = user.id;

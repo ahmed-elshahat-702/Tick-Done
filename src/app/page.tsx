@@ -7,17 +7,14 @@ import { TaskDashboard } from "@/components/task-dashboard";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 
 export default function Home() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      // Add a slight delay for smoother UX before redirect
-      setTimeout(() => {
-        router.push("/auth/signin");
-      }, 500);
+      router.push("/auth/signin");
     }
-  }, [status, router]);
+  }, [status, router, session?.user]);
 
   if (status === "loading") {
     return (

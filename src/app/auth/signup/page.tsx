@@ -23,8 +23,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
-import { redirect, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -44,12 +44,18 @@ const signupSchema = z
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignUpPage() {
-  const { data: session } = useSession();
+  const { status } = useSession();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/");
+    }
+  }, [router, status]);
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -65,13 +71,19 @@ export default function SignUpPage() {
     try {
       setIsLoading(true);
 
-      // if()
-
-      await fetch("/api/auth/signup", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        toast(
+          errorData?.error || "Failed to create account. Please try again."
+        );
+        return;
+      }
       toast("You can now sign in with your credentials.");
 
       router.push("/auth/signin");
@@ -82,10 +94,6 @@ export default function SignUpPage() {
       setIsLoading(false);
     }
   };
-
-  if (session?.user) {
-    redirect("/");
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

@@ -23,8 +23,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
-import { redirect, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -37,11 +37,16 @@ const signinSchema = z.object({
 type SigninFormData = z.infer<typeof signinSchema>;
 
 export default function SignInPage() {
-  const { data: session } = useSession();
-
+  const { status } = useSession();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/");
+    }
+  }, [router, status]);
 
   const form = useForm<SigninFormData>({
     resolver: zodResolver(signinSchema),
@@ -61,22 +66,46 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        toast("Invalid email or password. Please try again.");
+        switch (result.error) {
+          case "Missing credentials":
+            toast.error("Please provide both email and password.");
+            break;
+          case "User not found":
+            toast.error("No account found with this email.");
+            break;
+          case "Invalid password":
+            toast.error("Incorrect password. Please try again.");
+            break;
+          default:
+            toast.error("Authentication failed. Please try again.");
+        }
       } else {
-        toast("You have been signed in successfully.");
+        toast.success("You have been signed in successfully.");
         router.push("/");
       }
     } catch (error) {
-      toast("An unexpected error occurred. Please try again.");
+      toast.error("An unexpected error occurred. Please try again.");
       console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (session?.user) {
-    redirect("/");
-  }
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      const result = await signIn("google", { redirect: false });
+      if (result?.error) {
+        toast.error("Google sign-in failed. Please try again.");
+        console.error(result.error);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred during Google sign-in.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -158,15 +187,11 @@ export default function SignInPage() {
             </form>
           </Form>
 
-          {/* Google Sign-In */}
-
           <div className="mt-4 text-center">
             <Button
               variant="outline"
               className="w-full"
-              onClick={async () => {
-                await signIn("google");
-              }}
+              onClick={handleGoogleSignIn}
               disabled={isLoading}
             >
               <div className="relative w-5 h-5 mr-2">
@@ -174,7 +199,7 @@ export default function SignInPage() {
                   src="/google-logo.svg"
                   alt="Google"
                   fill
-                  className="object-cover "
+                  className="object-cover"
                 />
               </div>
               Sign in with Google

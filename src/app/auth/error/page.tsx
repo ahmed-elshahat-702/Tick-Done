@@ -1,8 +1,27 @@
+"use client";
 import React from "react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 
+import { useSearchParams } from "next/navigation";
+
+enum Error {
+  Configuration = "Configuration",
+}
+
+const errorMap = {
+  [Error.Configuration]: (
+    <p>
+      There was a problem when trying to authenticate. Please contact us if this
+      error persists. Unique error code:{" "}
+      <code className="rounded-sm bg-slate-100 p-1 text-xs">Configuration</code>
+    </p>
+  ),
+};
+
 const AuthErrorPage = () => {
+  const search = useSearchParams();
+  const error = search.get("error") as Error;
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
       <div className="bg-white shadow-lg rounded-lg p-8 max-w-md w-full text-center">
@@ -20,7 +39,7 @@ const AuthErrorPage = () => {
           Authentication Error
         </h1>
         <p className="text-gray-700 mb-4">
-          Oops! We couldn&apos;t sign you in. This could be due to:
+          {errorMap[error] || "Please contact us if this error persists."}
         </p>
         <ul className="text-left text-gray-600 mb-6 list-disc list-inside">
           <li>Expired session</li>

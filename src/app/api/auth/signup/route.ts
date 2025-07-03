@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "Email already registered" },
+        { error: "Email already registered. Try to signin." },
         { status: 409 }
       );
     }
