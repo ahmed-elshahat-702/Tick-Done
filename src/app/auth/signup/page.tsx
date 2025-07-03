@@ -21,7 +21,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
+import Image from "next/image";
+import { redirect, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -42,6 +44,8 @@ const signupSchema = z
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignUpPage() {
+  const { data: session } = useSession();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +82,10 @@ export default function SignUpPage() {
       setIsLoading(false);
     }
   };
+
+  if (session?.user) {
+    redirect("/");
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -215,6 +223,29 @@ export default function SignUpPage() {
               </Button>
             </form>
           </Form>
+
+          {/* Google Sign-up */}
+
+          <div className="mt-4 text-center">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                await signIn("google");
+              }}
+              disabled={isLoading}
+            >
+              <div className="relative w-5 h-5 mr-2">
+                <Image
+                  src="/google-logo.svg"
+                  alt="Google"
+                  fill
+                  className="object-cover "
+                />
+              </div>
+              Sign in with Google
+            </Button>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
