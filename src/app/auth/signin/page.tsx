@@ -1,14 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Eye, EyeOff, CheckCircle } from "lucide-react";
+import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import Logo from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -24,8 +18,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import { Input } from "@/components/ui/input";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 const signinSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -75,10 +76,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold">Tick Done</h1>
+            <Logo />
           </div>
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Sign in to your account to continue</CardDescription>

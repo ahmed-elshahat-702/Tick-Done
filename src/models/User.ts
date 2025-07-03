@@ -5,6 +5,7 @@ const UserSchema: Schema = new Schema<TUser>(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    image: { type: String, default: "" },
     hashedPassword: { type: String, required: true },
   },
   {

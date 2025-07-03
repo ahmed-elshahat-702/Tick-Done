@@ -58,10 +58,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
     <>
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <h1 className="font-semibold text-lg">Tick Done</h1>
-        </div>
+        <Logo />
       </div>
 
       {/* Navigation */}
@@ -169,7 +166,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
             <Menu className="h-6 w-6" />
           )}
         </Button>
-        <h1 className="font-semibold text-base">Tick Done</h1>
+        <Logo />
       </div>
 
       {/* Mobile Overlay */}
