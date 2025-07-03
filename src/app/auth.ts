@@ -125,20 +125,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.image = user.image;
       }
       if (account?.provider === "google") {
-        // Fetch user from DB to ensure ID consistency
         await connectDB();
         const dbUser = await User.findOne({ email: token.email });
         if (dbUser) {
           token.id = dbUser._id.toString();
+          token.name = dbUser.name;
+          token.image = dbUser.image;
         }
       }
       return token;
     },
     async session({ session, token }) {
-      if (token.id) {
+      if (token) {
         session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.image =
+          (token.picture as string) || (token.image as string);
+      }
+      // Fetch latest user data from DB
+      await connectDB();
+      const dbUser = await User.findOne({ email: session.user.email });
+      if (dbUser) {
+        session.user.name = dbUser.name;
+        session.user.image = dbUser.image;
       }
       return session;
     },
