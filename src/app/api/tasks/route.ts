@@ -12,9 +12,10 @@ export async function GET() {
     }
 
     await connectDB();
-    const tasks = await Task.find({ email: session.user.email }).sort({
+    const tasks = await Task.find({ userId: session.user.id }).sort({
       createdAt: -1,
     });
+
     return NextResponse.json({ tasks });
   } catch (error) {
     console.error("[TASK_GET]", error);

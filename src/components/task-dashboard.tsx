@@ -23,6 +23,7 @@ export function TaskDashboard() {
         setIsLoading(true);
         const res = await fetch("/api/tasks");
         const data = await res.json();
+        console.log(data);
         setTasks(data.tasks);
       } catch (error) {
         console.error("Failed to fetch tasks", error);

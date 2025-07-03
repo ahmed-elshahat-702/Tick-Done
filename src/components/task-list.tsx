@@ -11,6 +11,17 @@ interface TaskListProps {
 export function TaskList({ view }: TaskListProps) {
   const { tasks } = useTaskStore();
 
+  const filteredTasks = tasks.filter((task) => {
+    switch (view) {
+      case "today":
+        return task.dueDate && isToday(new Date(task.dueDate));
+      case "completed":
+        return task.status === "done";
+      default:
+        return true;
+    }
+  });
+
   const getTitle = () => {
     switch (view) {
       case "today":
@@ -21,17 +32,6 @@ export function TaskList({ view }: TaskListProps) {
         return "All Tasks";
     }
   };
-
-  const filteredTasks = (tasks || []).filter((task) => {
-    switch (view) {
-      case "today":
-        return task.dueDate && isToday(new Date(task.dueDate));
-      case "completed":
-        return task.status === "done";
-      default:
-        return true;
-    }
-  });
 
   return (
     <div className="space-y-6">
