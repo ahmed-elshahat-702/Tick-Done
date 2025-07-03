@@ -86,7 +86,12 @@ export default function SignUpPage() {
       }
       toast("You can now sign in with your credentials.");
 
-      router.push("/auth/signin");
+      // Pass email and password as query parameters
+      router.push(
+        `/auth/signin?email=${encodeURIComponent(
+          data.email
+        )}&password=${encodeURIComponent(data.password)}`
+      );
     } catch (error) {
       toast("Failed to create account. Please try again.");
       console.error(error);

@@ -23,7 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -41,6 +41,11 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Extract email and password from query parameters
+  const emailFromQuery = searchParams.get("email") || "";
+  const passwordFromQuery = searchParams.get("password") || "";
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -51,8 +56,8 @@ export default function SignInPage() {
   const form = useForm<SigninFormData>({
     resolver: zodResolver(signinSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: decodeURIComponent(emailFromQuery), // Prefill email
+      password: decodeURIComponent(passwordFromQuery), // Prefill password
     },
   });
 
