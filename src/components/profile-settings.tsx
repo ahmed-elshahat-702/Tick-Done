@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { signOut, useSession } from "next-auth/react";
 import { UploadButton } from "@/lib/uploadthing";
@@ -35,11 +36,13 @@ export function ProfileSettings() {
 
   // Local state for editable fields
   const [name, setName] = useState(user?.name || "");
+  const [bio, setBio] = useState(user?.bio || "");
   const [image, setImage] = useState<string>(user?.image || "");
 
   // Update local state when user changes (e.g., after login)
   useEffect(() => {
     setName(user?.name || "");
+    setBio(user?.bio || "");
     setImage(user?.image || "");
   }, [user]);
 
@@ -61,10 +64,10 @@ export function ProfileSettings() {
       const res = await fetch("/api/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, image }),
+        body: JSON.stringify({ name, bio, image }),
       });
       if (!res.ok) throw new Error("Failed to update profile");
-      await update({ name, image }); // Pass updated fields
+      await update({ name, bio, image }); // Pass updated fields
       setIsEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -88,11 +91,11 @@ export function ProfileSettings() {
       const resp = await fetch("/api/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, image: newImageUrl }),
+        body: JSON.stringify({ name, bio, image: newImageUrl }),
       });
       if (!resp.ok) throw new Error("Failed to update profile");
 
-      await update({ name, image: newImageUrl }); // Pass updated fields
+      await update({ name, bio, image: newImageUrl }); // Pass updated fields
 
       // Remove old image from UploadThing if it exists and is an UploadThing URL
       if (oldImageUrl && oldImageUrl.startsWith("https://utfs.io/f/")) {
@@ -238,6 +241,18 @@ export function ProfileSettings() {
               onChange={(e) => setName(e.target.value)}
               disabled={!isEditing}
               readOnly={!isEditing}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              disabled={!isEditing}
+              readOnly={!isEditing}
+              placeholder="Tell us about yourself"
+              rows={4}
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}

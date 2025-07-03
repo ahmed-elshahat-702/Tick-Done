@@ -10,10 +10,10 @@ export async function PATCH(req: Request) {
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { name, image } = await req.json();
+  const { name, image, bio } = await req.json();
   const updated = await User.findOneAndUpdate(
     { email: session.user.email },
-    { name, image },
+    { name, image, bio },
     { new: true }
   );
   return NextResponse.json({ user: updated });

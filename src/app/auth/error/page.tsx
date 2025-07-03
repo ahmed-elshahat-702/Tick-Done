@@ -38,9 +38,7 @@ const AuthErrorPage = () => {
         <h1 className="text-2xl font-bold text-red-600 mb-2">
           Authentication Error
         </h1>
-        <p className="text-gray-700 mb-4">
-          {errorMap[error] || "Please contact us if this error persists."}
-        </p>
+        {errorMap[error] || "Please contact us if this error persists."}
         <ul className="text-left text-gray-600 mb-6 list-disc list-inside">
           <li>Expired session</li>
           <li>Invalid credentials</li>

@@ -5,6 +5,31 @@ import NextAuth, { AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
+import type { JWT } from "next-auth/jwt";
+
+interface AppUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  bio?: string | null;
+}
+
+// Extend the default Session type to include 'bio'
+declare module "next-auth" {
+  interface Session {
+    user: AppUser;
+  }
+}
+
+interface AppJWT extends JWT {
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  bio?: string | null;
+}
+
 // Connect to DB once at module level (if safe for your setup)
 connectDB();
 
@@ -20,13 +45,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           response_type: "code",
         },
       },
-      profile(profile) {
-        return {
-          id: profile.sub, // Temporary ID, overridden in jwt callback
+      profile(profile: {
+        sub: string;
+        name: string;
+        email: string;
+        picture: string;
+      }) {
+        const user: AppUser = {
+          id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+          bio: "",
         };
+        return user;
       },
     }),
     Credentials({
@@ -61,12 +93,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new AuthError("Invalid password");
         }
 
-        return {
+        const appUser: AppUser = {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
+          bio: user.bio || "",
           image: user.image,
         };
+
+        return appUser;
       },
     }),
   ],
@@ -86,53 +121,67 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: profile.name,
             email: profile.email,
             image: profile.picture,
+            bio: "",
             authProvider: "google",
           });
         } else {
-          await User.updateOne(
-            { email: profile.email },
-            {
-              name: profile.name,
-              image: profile.picture,
-              authProvider: "google",
-            }
-          );
+          if (dbUser.authProvider !== "google") {
+            await User.updateOne(
+              { email: profile.email },
+              {
+                name: profile.name,
+                image: profile.picture,
+                authProvider: "google",
+              }
+            );
+          }
         }
         return true;
       }
       return true;
     },
     async jwt({ token, user, account }) {
+      const appToken = token as AppJWT;
       if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.image = user.image;
+        appToken.id = (user as AppUser).id;
+        appToken.name = user.name;
+        appToken.email = user.email;
+        appToken.image = user.image;
+        appToken.bio = (user as AppUser).bio;
       }
       if (account?.provider === "google") {
-        const dbUser = await User.findOne({ email: token.email });
+        const dbUser = await User.findOne({ email: appToken.email });
         if (dbUser) {
-          token.id = dbUser._id.toString(); // Ensure token.id is DB _id
-          token.name = dbUser.name;
-          token.image = dbUser.image;
+          appToken.id = dbUser._id.toString();
+          appToken.name = dbUser.name;
+          appToken.image = dbUser.image;
+          appToken.bio = dbUser.bio || "";
         }
       }
-      return token;
+      return appToken;
     },
     async session({ session, token }) {
-      if (token.id) {
-        // Ensure session.user exists and has an 'id' property of type string
-        (session.user as { id?: string }).id = String(token.id); // Ensure session.user.id matches DB _id
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-        session.user.image =
-          (token.picture as string) || (token.image as string);
+      const appToken = token as AppJWT;
+      if (appToken.id && session.user) {
+        session.user = {
+          id: String(appToken.id),
+          name: appToken.name,
+          email: appToken.email ?? "",
+          image: appToken.image,
+          bio: appToken.bio ?? "",
+          emailVerified: null,
+        };
       }
-      // Update session with latest DB data
-      const dbUser = await User.findOne({ email: session.user.email });
-      if (dbUser) {
-        session.user.name = dbUser.name;
-        session.user.image = dbUser.image;
+      if (session.user?.email) {
+        const dbUser = await User.findOne({ email: session.user.email });
+        if (dbUser) {
+          session.user = {
+            ...session.user,
+            name: dbUser.name,
+            image: dbUser.image,
+            bio: dbUser.bio || "",
+          };
+        }
       }
       return session;
     },
