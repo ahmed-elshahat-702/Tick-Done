@@ -173,6 +173,7 @@ export function ProfileSettings() {
             <Avatar className="h-20 w-20">
               <AvatarImage
                 src={image || user?.image || "/placeholder-user.jpg"}
+                className="w-full h-full object-cover"
               />
               <AvatarFallback className="text-lg">
                 {getInitials(name)}
