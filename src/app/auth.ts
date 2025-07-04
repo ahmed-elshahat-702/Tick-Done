@@ -14,6 +14,7 @@ interface AppUser {
   email?: string | null;
   image?: string | null;
   bio?: string | null;
+  authProvider?: string | null;
 }
 
 // Extend the default Session type to include 'bio'
@@ -29,6 +30,7 @@ interface AppJWT extends JWT {
   email?: string | null;
   image?: string | null;
   bio?: string | null;
+  authProvider?: string | null;
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -119,6 +121,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           bio: user.bio || "",
           image: user.image,
+          authProvider: user.authProvider,
         };
 
         return appUser;
@@ -192,6 +195,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         appToken.email = user.email;
         appToken.image = user.image;
         appToken.bio = (user as AppUser).bio;
+        appToken.authProvider = (user as AppUser).authProvider;
       }
       if (account?.provider === "google" || account?.provider === "github") {
         await connectDB();
@@ -215,6 +219,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: appToken.image,
           bio: appToken.bio ?? "",
           emailVerified: null,
+          authProvider: appToken.authProvider,
         };
       }
       if (session.user?.email) {
@@ -227,6 +232,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: dbUser.name,
             image: dbUser.image,
             bio: dbUser.bio || "",
+            authProvider: dbUser.authProvider,
           };
         }
       }
