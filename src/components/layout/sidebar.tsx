@@ -132,7 +132,10 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
         ) : (
           <div className="flex items-center gap-3 p-2">
             <Avatar className="w-8 h-8">
-              <AvatarImage src={session?.user?.image || ""} />
+              <AvatarImage
+                src={session?.user?.image || ""}
+                className="w-full h-full object-cover"
+              />
               <AvatarFallback>
                 {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
               </AvatarFallback>
