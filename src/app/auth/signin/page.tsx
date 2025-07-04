@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Github } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -88,7 +88,7 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      await signIn("google"); // No result to check since redirect happens
+      await signIn("google");
     } catch (error) {
       toast.error("An unexpected error occurred during Google sign-in.");
       console.error(error);
@@ -97,9 +97,21 @@ export default function SignInPage() {
     }
   };
 
+  const handleGithubSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await signIn("github");
+    } catch (error) {
+      toast.error("An unexpected error occurred during Github sign-in.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Logo />
@@ -183,9 +195,9 @@ export default function SignInPage() {
             <div className="flex-grow border-t border-muted-foreground/20" />
           </div>
 
-          {/* Google Sign-up */}
-
-          <div className="mt-4 text-center">
+          {/* Providers */}
+          <div className="w-full grid md:grid-cols-2 items-center gap-4">
+            {/* Google Sign-in */}
             <Button
               variant="outline"
               className="w-full"
@@ -200,10 +212,22 @@ export default function SignInPage() {
                   className="object-cover"
                 />
               </div>
-              Sign in with Google
+              Continue with Google
+            </Button>
+
+            {/* Github Sign-in */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleGithubSignIn}
+              disabled={isLoading}
+            >
+              <Github className="w-5 h-5 mr-2" />
+              Continue with Google
             </Button>
           </div>
 
+          {/* Sign up */}
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}

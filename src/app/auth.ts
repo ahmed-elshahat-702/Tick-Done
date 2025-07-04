@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import NextAuth, { AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import GitHub from "next-auth/providers/github";
 
 import type { JWT } from "next-auth/jwt";
 
@@ -53,6 +54,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+          bio: "",
+        };
+        return user;
+      },
+    }),
+    GitHub({
+      clientId: process.env.AUTH_GITHUB_ID,
+      clientSecret: process.env.AUTH_GITHUB_SECRET,
+      profile(profile: {
+        login: string | null | undefined;
+        id: number;
+        name?: string | null;
+        email?: string | null;
+        avatar_url?: string;
+      }) {
+        const user: AppUser = {
+          id: profile.id.toString(), // Convert to string for consistency
+          name: profile.name || profile.login, // Fallback to login if name is null
+          email: profile.email || "", // GitHub may not always provide email
+          image: profile.avatar_url || "",
           bio: "",
         };
         return user;
@@ -139,6 +160,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
         return true;
       }
+      if (account?.provider === "github" && profile) {
+        let dbUser = await User.findOne({ email: profile.email || "" });
+        if (!dbUser && profile.email) {
+          dbUser = await User.create({
+            name: profile.name || profile.login,
+            email: profile.email,
+            image: profile.avatar_url,
+            bio: "",
+            authProvider: "github",
+          });
+        } else if (dbUser && dbUser.authProvider !== "github") {
+          await User.updateOne(
+            { email: profile.email },
+            {
+              name: profile.name || profile.login,
+              image: profile.avatar_url,
+              authProvider: "github",
+            }
+          );
+        }
+        return true;
+      }
       return true;
     },
     async jwt({ token, user, account }) {
@@ -150,9 +193,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         appToken.image = user.image;
         appToken.bio = (user as AppUser).bio;
       }
-      if (account?.provider === "google") {
+      if (account?.provider === "google" || account?.provider === "github") {
         await connectDB();
-
         const dbUser = await User.findOne({ email: appToken.email });
         if (dbUser) {
           appToken.id = dbUser._id.toString();

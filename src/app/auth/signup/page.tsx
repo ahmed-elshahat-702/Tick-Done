@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Github } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -100,12 +100,23 @@ export default function SignUpPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignUp = async () => {
     try {
       setIsLoading(true);
-      await signIn("google"); // No result to check since redirect happens
+      await signIn("google");
     } catch (error) {
-      toast.error("An unexpected error occurred during Google sign-in.");
+      toast.error("An unexpected error occurred during Google sign-up.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleGithubSignUp = async () => {
+    try {
+      setIsLoading(true);
+      await signIn("github");
+    } catch (error) {
+      toast.error("An unexpected error occurred during Github sign-up.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -114,7 +125,7 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Logo />
@@ -255,13 +266,13 @@ export default function SignUpPage() {
             <div className="flex-grow border-t border-muted-foreground/20" />
           </div>
 
-          {/* Google Sign-up */}
-
-          <div className="mt-4 text-center">
+          {/* Providers */}
+          <div className="w-full grid md:grid-cols-2 items-center gap-4">
+            {/* Google Sign-up */}
             <Button
               variant="outline"
-              className="w-full"
-              onClick={handleGoogleSignIn}
+              className="w-full flex item-center gap-2"
+              onClick={handleGoogleSignUp}
               disabled={isLoading}
             >
               <div className="relative w-5 h-5 mr-2">
@@ -269,13 +280,25 @@ export default function SignUpPage() {
                   src="/google-logo.svg"
                   alt="Google"
                   fill
-                  className="object-cover "
+                  className="object-cover"
                 />
               </div>
               Sign up with Google
             </Button>
+
+            {/* Github Sign-up */}
+            <Button
+              variant="outline"
+              className="w-full flex item-center gap-2"
+              onClick={handleGithubSignUp}
+              disabled={isLoading}
+            >
+              <Github className="w-5 h-5 mr-2" />
+              Sign up with Google
+            </Button>
           </div>
 
+          {/* Sign in */}
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
