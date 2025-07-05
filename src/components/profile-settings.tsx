@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTaskStore } from "@/lib/store";
-import { UploadButton } from "@/lib/uploadthing";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Calendar,
@@ -22,10 +21,10 @@ import {
   User,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import type { ClientUploadedFileData } from "uploadthing/types";
+import Cropper, { Area } from "react-easy-crop";
 import * as z from "zod";
 import {
   Dialog,
@@ -37,7 +36,9 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { LoadingSpinner } from "./layout/loading-spinner";
+import { v4 as uuidv4 } from 'uuid';
 
+// Schema for password change
 const schema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),
@@ -59,9 +60,14 @@ export function ProfileSettings() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get user session data
   const { data: session, update } = useSession();
@@ -108,6 +114,178 @@ export function ProfileSettings() {
       .toUpperCase();
   }
 
+  const randomImageName = `${user?.email}-${uuidv4()}`;
+
+  // Function to get cropped image
+  const getCroppedImage = async (
+    imageSrc: string,
+    pixelCrop: Area
+  ): Promise<File> => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise((resolve) => (image.onload = resolve));
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("Canvas context not available");
+    }
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Failed to create blob"));
+            return;
+          }
+          resolve(new File([blob], randomImageName, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.9
+      );
+    });
+  };
+
+  // Handle crop completion
+  const onCropComplete = (_croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  // Handle file selection for cropping
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files?.[0]) return;
+
+    const file = files[0];
+    
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+      toast.error("Only JPEG, PNG, or GIF images are allowed");
+      return;
+    }
+
+    // Validate file size (4MB max)
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image size must be less than 4MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageToCrop(reader.result as string);
+      setIsCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset file input to allow reselecting the same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Handle image upload after cropping
+  const handleCropAndUpload = async () => {
+    if (!imageToCrop || !croppedAreaPixels) {
+      toast.error("No image to crop or crop area not set");
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const croppedImageFile = await getCroppedImage(imageToCrop, croppedAreaPixels);
+      const oldImageUrl = image;
+
+      // Upload cropped image
+      const formData = new FormData();
+      formData.append("file", croppedImageFile);
+
+      const uploadResponse = await fetch("/api/uploadthing", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const responseData = await uploadResponse.json();
+      if (!responseData?.url) {
+        throw new Error("No URL returned from upload");
+      }
+      const newImageUrl = responseData.url;
+
+      // Update user profile with new image
+      const updateResponse = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, bio, image: newImageUrl }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update profile");
+      }
+
+      // Update session and local state
+      await update({ name, bio, image: newImageUrl });
+      setImage(newImageUrl);
+
+      // Delete old image after successful profile update
+      if (oldImageUrl && oldImageUrl.startsWith("https://utfs.io/f/")) {
+        const fileKey = oldImageUrl.split("/f/")[1]?.split("?")[0];
+        if (fileKey) {
+          const deleteResponse = await fetch("/api/uploadthing", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileKey }),
+          });
+          
+          if (!deleteResponse.ok) {
+            console.error("Failed to delete old image, but profile updated successfully");
+          }
+        }
+      }
+
+      setIsCropModalOpen(false);
+      setImageToCrop(null); // Reset imageToCrop after successful upload
+      toast.success("Profile updated successfully");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error("Error:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle dialog close (for Cancel button)
+  const handleCropDialogClose = () => {
+    setIsCropModalOpen(false);
+    setImageToCrop(null); // Reset imageToCrop when dialog is closed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Reset file input
+    }
+  };
+
   // Save profile changes
   const handleSave = async () => {
     setIsSaving(true);
@@ -119,50 +297,12 @@ export function ProfileSettings() {
         body: JSON.stringify({ name, bio, image }),
       });
       if (!res.ok) throw new Error("Failed to update profile");
-      await update({ name, bio, image }); // Pass updated fields
+      await update({ name, bio, image });
       setIsEditing(false);
+      toast.success("Profile updated successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleUploadComplete = async (
-    res: ClientUploadedFileData<{ uploadedBy: string }>[] | undefined
-  ) => {
-    if (!res?.[0]?.url) return;
-    const newImageUrl = res[0].url;
-    const oldImageUrl = image;
-
-    setImage(newImageUrl);
-    setIsSaving(true);
-    setError("");
-    try {
-      // Edit user data
-      const resp = await fetch("/api/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, bio, image: newImageUrl }),
-      });
-      if (!resp.ok) throw new Error("Failed to update profile");
-
-      await update({ name, bio, image: newImageUrl }); // Pass updated fields
-
-      // Remove old image from UploadThing if it exists and is an UploadThing URL
-      if (oldImageUrl && oldImageUrl.startsWith("https://utfs.io/f/")) {
-        const fileKey = oldImageUrl.split("/f/")[1]?.split("?")[0];
-        if (fileKey) {
-          await fetch("/api/uploadthing/delete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileKey }),
-          });
-        }
-      }
-      setIsEditing(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      toast.error("Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -179,23 +319,18 @@ export function ProfileSettings() {
     try {
       const res = await changePassword(data.currentPassword, data.newPassword);
 
-      if (!res) {
-        throw new Error("Failed to change password");
+      if (res?.error) {
+        throw new Error(res.error);
       }
 
-      if (res.error) {
-        toast.error(res.error);
-      }
-
-      if (res.success) {
-        toast.error(res.success);
+      if (res?.success) {
+        toast.success(res.success);
         await signOut({ callbackUrl: "/auth/signin" });
       }
-
-      setIsEditing(false);
-      return;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const errorMessage = err instanceof Error ? err.message : "Password change failed";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -206,18 +341,32 @@ export function ProfileSettings() {
     setIsDeleting(true);
     setError("");
     try {
-      // Remove current image from UploadThing if it's an UploadThing URL
+      // Delete profile image if it exists
       if (image && image.startsWith("https://utfs.io/f/")) {
         const fileKey = image.split("/f/")[1]?.split("?")[0];
         if (fileKey) {
-          await fetch("/api/uploadthing/delete", {
-            method: "POST",
+          console.log("Attempting to delete image with fileKey:", fileKey); // Log for debugging
+          const deleteResponse = await fetch("/api/uploadthing", {
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ fileKey }),
           });
+
+          if (!deleteResponse.ok) {
+            const errorData = await deleteResponse.json();
+            console.error("Image deletion failed:", errorData);
+            throw new Error(errorData.error || "Failed to delete profile image");
+          }
+
+          const deleteResult = await deleteResponse.json();
+          if (!deleteResult.success) {
+            console.error("Image deletion unsuccessful:", deleteResult);
+            throw new Error("Failed to delete profile image");
+          }
         }
       }
 
+      // Delete user tasks and account
       await Promise.all([
         fetch("/api/user", {
           method: "DELETE",
@@ -227,9 +376,14 @@ export function ProfileSettings() {
         }),
         deleteUserTasks(),
       ]);
+
       await signOut({ callbackUrl: "/auth/signin" });
+      toast.success("Account deleted successfully");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error("Error:", err);
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
@@ -266,56 +420,22 @@ export function ProfileSettings() {
             </Avatar>
             <div className="space-y-2">
               {isEditing && (
-                <UploadButton
-                  endpoint="imageUploader"
-                  onClientUploadComplete={handleUploadComplete}
-                  onUploadError={(err) => setError(err.message)}
-                  appearance={{
-                    button: {
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "0.5rem 1rem",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      lineHeight: "1.25rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.375rem",
-                      backgroundColor: "#ffffff",
-                      color: "#111827",
-                      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    },
-                    allowedContent: {
-                      fontSize: "0.875rem",
-                      color: "#6b7280",
-                    },
-                    clearBtn: {
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "0.5rem",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      lineHeight: "1.25rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.375rem",
-                      backgroundColor: "#ffffff",
-                      color: "#dc2626",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    },
-                    container: {
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.5rem",
-                      padding: "0.5rem",
-                      borderRadius: "0.375rem",
-                      backgroundColor: "transparent",
-                    },
-                  }}
-                />
+                <div>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="image-upload"
+                    ref={fileInputRef}
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50 transition-all"
+                  >
+                    Upload Image
+                  </label>
+                </div>
               )}
             </div>
           </div>
@@ -363,6 +483,45 @@ export function ProfileSettings() {
         </CardContent>
       </Card>
 
+      {/* Crop Modal */}
+      <Dialog open={isCropModalOpen} onOpenChange={setIsCropModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Crop Your Profile Picture</DialogTitle>
+            <DialogDescription>
+              Adjust the image to fit your profile picture.
+            </DialogDescription>
+          </DialogHeader>
+          <div style={{ position: "relative", width: "100%", height: "400px" }}>
+            {imageToCrop && (
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                cropShape="round"
+                showGrid={false}
+              />
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCropDialogClose}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCropAndUpload} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Crop & Upload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Productivity Stats */}
       <Card>
         <CardHeader>
@@ -382,7 +541,6 @@ export function ProfileSettings() {
                 <p className="text-sm text-muted-foreground">Tasks Completed</p>
               </div>
             </div>
-
             <div className="text-center space-y-2">
               <div className="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full mx-auto">
                 <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -392,156 +550,128 @@ export function ProfileSettings() {
                 <p className="text-sm text-muted-foreground">Completion Rate</p>
               </div>
             </div>
-
-            {/* <div className="text-center space-y-2">
-              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full mx-auto">
-                <Trophy className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">7</p>
-                <p className="text-sm text-muted-foreground">Day Streak</p>
-              </div>
-            </div> */}
           </div>
         </CardContent>
       </Card>
 
       {/* Security */}
-      {user?.authProvider === "credentials" ||
-        (!user?.authProvider && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" />
-                Security
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form
-                onSubmit={handleSubmit(handleChangePassword)}
-                className="space-y-4"
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showCurrentPassword ? "text" : "password"}
-                      {...register("currentPassword")}
-                      disabled={isSaving}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() =>
-                        setShowCurrentPassword(!showCurrentPassword)
-                      }
-                      disabled={isSaving}
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  {errors.currentPassword && (
-                    <p className="text-red-500 text-sm">
-                      {errors.currentPassword.message}
-                    </p>
-                  )}
+      {(user?.authProvider === "credentials" || !user?.authProvider) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Security
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              onSubmit={handleSubmit(handleChangePassword)}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    {...register("currentPassword")}
+                    disabled={isSaving}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    disabled={isSaving}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      {...register("newPassword")}
-                      disabled={isSaving}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      disabled={isSaving}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  {errors.newPassword && (
-                    <p className="text-red-500 text-sm">
-                      {errors.newPassword.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      {...register("confirmPassword")}
-                      disabled={isSaving}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      disabled={isSaving}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-sm">
-                      {errors.confirmPassword.message}
-                    </p>
-                  )}
-                </div>
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <LoadingSpinner />
-                      <span>Updating Password...</span>
-                    </>
-                  ) : (
-                    "Update Password"
-                  )}
-                </Button>
-              </form>
-              {/* <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input id="current-password" type="password" />
+                {errors.currentPassword && (
+                  <p className="text-red-500 text-sm">
+                    {errors.currentPassword.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type="password" />
+                <Label htmlFor="newPassword">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    {...register("newPassword")}
+                    disabled={isSaving}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    disabled={isSaving}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {errors.newPassword && (
+                  <p className="text-red-500 text-sm">
+                    {errors.newPassword.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input id="confirm-password" type="password" />
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    {...register("confirmPassword")}
+                    disabled={isSaving}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isSaving}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-sm">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
               </div>
-              <Button>Update Password</Button> */}
-            </CardContent>
-          </Card>
-        ))}
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <LoadingSpinner />
+                    <span>Updating Password...</span>
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Danger Zone */}
       <Card className="border-red-200 dark:border-red-800">
