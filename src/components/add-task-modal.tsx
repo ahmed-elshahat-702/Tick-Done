@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { createTask, UpdateTask } from "@/actions/tasks";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
@@ -34,13 +35,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useTaskStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { TTask } from "@/types/task";
+import { TTask, SubTask } from "@/types/task";
 import { TaskFormData, taskSchema } from "@/validation/Task";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
 interface AddTaskModalProps {
   open: boolean;
@@ -51,6 +53,8 @@ interface AddTaskModalProps {
 export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
   const { addTask, editTask, isHandling, setIsHandling } = useTaskStore();
   const isEditing = !!task;
+  const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
+  const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -60,26 +64,55 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
       priority: task?.priority || "medium",
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
       tag: task?.tag || "",
+      subTasks: task?.subTasks || [],
     },
   });
 
+  const addSubTask = () => {
+    if (!newSubTaskTitle.trim()) {
+      toast("Sub-task title cannot be empty.");
+      return;
+    }
+
+    // Check for duplicate sub-task title
+    if (
+      subTasks.some(
+        (subTask) =>
+          subTask.title.toLowerCase() === newSubTaskTitle.trim().toLowerCase()
+      )
+    ) {
+      toast("A sub-task with this title already exists.");
+      return;
+    }
+
+    const newSubTask: SubTask = {
+      _id: uuidv4(),
+      title: newSubTaskTitle.trim(),
+      status: "todo",
+    };
+    setSubTasks([...subTasks, newSubTask]);
+    setNewSubTaskTitle("");
+    form.setValue("subTasks", [...subTasks, newSubTask]);
+  };
+
+  const removeSubTask = (id: string) => {
+    const updatedSubTasks = subTasks.filter((subTask) => subTask._id !== id);
+    setSubTasks(updatedSubTasks);
+    form.setValue("subTasks", updatedSubTasks);
+  };
+
   const onSubmit = async (data: TaskFormData) => {
     try {
+      const taskData = { ...data, subTasks: data.subTasks || [] };
       if (isEditing && task) {
         try {
           setIsHandling(true);
-          const res = await UpdateTask(task._id, {
-            ...data,
-            dueDate: data.dueDate,
-          });
+          const res = await UpdateTask(task._id, taskData);
           if (res?.error) {
             toast(res.error);
           }
           if (res?.success && res?.task) {
-            await editTask(task._id, {
-              ...data,
-              dueDate: data.dueDate,
-            });
+            await editTask(task._id, taskData);
             toast(res.success);
             form.reset({
               title: res?.task?.title || "",
@@ -89,6 +122,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                 ? new Date(res?.task.dueDate)
                 : undefined,
               tag: res?.task?.tag || "",
+              subTasks: res?.task?.subTasks || [],
             });
           }
         } catch (error) {
@@ -100,7 +134,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
       } else {
         try {
           setIsHandling(true);
-          const res = await createTask(data);
+          const res = await createTask(taskData);
           if (res?.error) {
             toast(res.error);
           }
@@ -116,6 +150,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
         }
       }
       form.reset();
+      setSubTasks([]);
       onOpenChange(false);
     } catch (error) {
       toast(`Something went wrong. Please try again.`);
@@ -126,6 +161,8 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
   const handleClose = () => {
     if (!isHandling) {
       form.reset();
+      setSubTasks(task?.subTasks || []);
+      setNewSubTaskTitle("");
       onOpenChange(false);
     }
   };
@@ -176,6 +213,46 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>Sub-tasks</FormLabel>
+              <div className="flex gap-2">
+                <FormControl>
+                  <Input
+                    placeholder="Add sub-task..."
+                    value={newSubTaskTitle}
+                    onChange={(e) => setNewSubTaskTitle(e.target.value)}
+                    disabled={isHandling}
+                  />
+                </FormControl>
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={addSubTask}
+                  disabled={isHandling || !newSubTaskTitle.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {subTasks.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {subTasks.map((subTask) => (
+                    <div key={subTask._id} className="flex items-center gap-2">
+                      <span className="text-sm">{subTask.title}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSubTask(subTask._id)}
+                        disabled={isHandling}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </FormItem>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField

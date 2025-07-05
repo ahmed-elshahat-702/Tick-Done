@@ -7,7 +7,7 @@ import { User } from "@/models/User";
 import { TaskFormData } from "@/validation/Task";
 import { revalidatePath } from "next/cache";
 import { toPlainObject } from "../lib/utils";
-import { TTask } from "@/types/task";
+import { SubTask, TTask } from "@/types/task";
 import { ObjectId } from "mongoose";
 
 const trimTitle = (title: string) =>
@@ -36,14 +36,28 @@ export async function createTask(taskData: TaskFormData) {
     });
 
     if (isExisting) {
-      return { error: "Task with this title already exist." };
+      return { error: "Task with this title already exists." };
     }
-    // Create task
+
+    // Check for duplicate sub-task titles
+    if (taskData.subTasks && taskData.subTasks.length > 0) {
+      const subTaskTitles = taskData.subTasks.map((subTask) =>
+        subTask.title.toLowerCase()
+      );
+      const uniqueTitles = new Set(subTaskTitles);
+      if (uniqueTitles.size !== subTaskTitles.length) {
+        return {
+          error: "Sub-tasks must have unique titles within the same task.",
+        };
+      }
+    }
+
+    // Create task with sub-tasks
     const task = await Task.create({
       ...taskData,
-      // Trim title
       title: trimTitle(taskData.title),
       userId: user._id,
+      subTasks: taskData.subTasks || [],
     });
 
     revalidatePath("/");
@@ -54,6 +68,7 @@ export async function createTask(taskData: TaskFormData) {
     };
   } catch (error) {
     console.error("Failed to add new task:", error);
+    return { error: "Failed to create task" };
   }
 }
 
@@ -75,22 +90,37 @@ export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
     const user = await User.findOne({ email: session.user.email });
 
     // Check for existing task with the same title
-
     const isExisting = await Task.findOne({
       title: taskData.title,
       userId: user._id,
     });
 
     if (isExisting && isExisting._id != taskId) {
-      return { error: "Task with this title already exist." };
+      return { error: "Task with this title already exists." };
     }
+
+    // Check for duplicate sub-task titles
+    if (taskData.subTasks && taskData.subTasks.length > 0) {
+      const subTaskTitles = taskData.subTasks.map((subTask) =>
+        subTask.title.toLowerCase()
+      );
+      const uniqueTitles = new Set(subTaskTitles);
+      if (uniqueTitles.size !== subTaskTitles.length) {
+        return {
+          error: "Sub-tasks must have unique titles within the same task.",
+        };
+      }
+    }
+
+    // Update task with sub-tasks
     const task = await Task.findByIdAndUpdate(
       taskId,
       {
         ...taskData,
         title: trimTitle(taskData.title),
+        subTasks: taskData.subTasks || [],
       },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!task) {
@@ -105,6 +135,7 @@ export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
     };
   } catch (error) {
     console.error("Failed to update task:", error);
+    return { error: "Failed to update task" };
   }
 }
 
@@ -127,7 +158,7 @@ export async function updateTaskStatus(
     const task = await Task.findByIdAndUpdate(
       taskId,
       { status },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!task) {
@@ -141,7 +172,56 @@ export async function updateTaskStatus(
       task: toPlainObject<TTask>(task),
     };
   } catch (error) {
-    console.error("Failed to update task:", error);
+    console.error("Failed to update task status:", error);
+    return { error: "Failed to update task status" };
+  }
+}
+
+export async function updateSubTaskStatus(
+  taskId: ObjectId,
+  subTaskId: string,
+  status: "todo" | "done"
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!taskId || !subTaskId) {
+      return { error: "Task ID and Sub-task ID are required." };
+    }
+
+    await connectDB();
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return { error: "Task not found!" };
+    }
+
+    // Update sub-task status
+    const subTasks = task.subTasks || [];
+    const subTaskIndex = subTasks.findIndex(
+      (subTask: SubTask) => subTask._id.toString() === subTaskId
+    );
+    if (subTaskIndex === -1) {
+      return { error: "Sub-task not found!" };
+    }
+
+    subTasks[subTaskIndex].status = status;
+    task.subTasks = subTasks;
+
+    await task.save({ validateBeforeSave: true });
+
+    revalidatePath("/");
+
+    return {
+      success: "Sub-task status updated successfully!",
+      task: toPlainObject<TTask>(task),
+    };
+  } catch (error) {
+    console.error("Failed to update sub-task status:", error);
+    return { error: "Failed to update sub-task status" };
   }
 }
 
@@ -163,6 +243,7 @@ export async function deleteTask(taskId: ObjectId) {
     return { success: "Task deleted successfully" };
   } catch (error) {
     console.error("Failed to delete task:", error);
+    return { error: "Failed to delete task" };
   }
 }
 
@@ -184,5 +265,6 @@ export async function deleteUserTasks() {
     };
   } catch (error) {
     console.error("Failed to delete user tasks:", error);
+    return { error: "Failed to delete user tasks" };
   }
 }

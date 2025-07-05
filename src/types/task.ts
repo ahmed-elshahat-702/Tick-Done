@@ -1,5 +1,11 @@
 import { ObjectId } from "mongoose";
 
+export interface SubTask {
+  _id: string;
+  title: string;
+  status: "todo" | "done";
+}
+
 export interface TTask {
   _id: ObjectId;
   title: string;
@@ -11,4 +17,5 @@ export interface TTask {
   createdAt: Date;
   updatedAt: Date;
   userId?: ObjectId;
+  subTasks?: SubTask[];
 }

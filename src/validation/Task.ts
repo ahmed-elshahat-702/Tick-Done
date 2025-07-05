@@ -1,17 +1,20 @@
 import { z } from "zod";
 
 export const taskSchema = z.object({
-  title: z
-    .string()
-    .min(1, "Title is required")
-    .max(100, "Title must be less than 100 characters"),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional(),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]),
   dueDate: z.date().optional(),
-  tag: z.string().max(20, "Tag must be less than 20 characters").optional(),
+  tag: z.string().optional(),
+  subTasks: z
+    .array(
+      z.object({
+        _id: z.string(),
+        title: z.string().min(1, "Sub-task title is required"),
+        status: z.enum(["todo", "done"]),
+      })
+    )
+    .optional(),
 });
 
 export type TaskFormData = z.infer<typeof taskSchema>;

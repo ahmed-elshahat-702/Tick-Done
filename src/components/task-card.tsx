@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Clock, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +27,11 @@ import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { TTask } from "@/types/task";
-import { deleteTask, updateTaskStatus } from "@/actions/tasks";
+import {
+  deleteTask,
+  updateTaskStatus,
+  updateSubTaskStatus,
+} from "@/actions/tasks";
 
 interface TaskCardProps {
   task: TTask;
@@ -42,11 +54,15 @@ const statusColors = {
 export function TaskCard({ task }: TaskCardProps) {
   const { editTask, removeTask, isHandling, setIsHandling } = useTaskStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isTaskUpdating, setIsTaskUpdating] = useState(false);
+  const [updatingSubTaskId, setUpdatingSubTaskId] = useState<string | null>(
+    null
+  );
+  const [isSubTasksOpen, setIsSubTasksOpen] = useState(false);
 
   const handleStatusChange = async (checked: boolean) => {
     try {
-      setIsUpdating(true);
+      setIsTaskUpdating(true);
       const res = await updateTaskStatus(task._id, checked ? "done" : "todo");
       if (res?.error) {
         toast(res.error);
@@ -65,7 +81,30 @@ export function TaskCard({ task }: TaskCardProps) {
       toast(`Failed to update task status. Please try again.`);
       console.error(error);
     } finally {
-      setIsUpdating(false);
+      setIsTaskUpdating(false);
+    }
+  };
+
+  const handleSubTaskStatusChange = async (
+    subTaskId: string,
+    checked: boolean
+  ) => {
+    try {
+      setUpdatingSubTaskId(subTaskId);
+      const newStatus: "todo" | "done" = checked ? "done" : "todo";
+      const res = await updateSubTaskStatus(task._id, subTaskId, newStatus);
+      if (res?.error) {
+        toast(res.error);
+      }
+      if (res?.success && res?.task) {
+        await editTask(task._id, { subTasks: res.task.subTasks });
+        toast(checked ? "Sub-task completed!" : "Sub-task marked as todo.");
+      }
+    } catch (error) {
+      toast(`Failed to update sub-task status. Please try again.`);
+      console.error(error);
+    } finally {
+      setUpdatingSubTaskId(null);
     }
   };
 
@@ -97,7 +136,7 @@ export function TaskCard({ task }: TaskCardProps) {
           "transition-all hover:shadow-md",
           task.status === "done" && "opacity-60",
           isOverdue && "border-red-200 dark:border-red-800",
-          (isHandling || isUpdating) && "opacity-50"
+          (isHandling || isTaskUpdating) && "opacity-50"
         )}
       >
         <CardContent className="p-4">
@@ -107,11 +146,10 @@ export function TaskCard({ task }: TaskCardProps) {
                 checked={task.status === "done"}
                 onCheckedChange={handleStatusChange}
                 className={`mt-1 ${
-                  isUpdating || isHandling ? "opacity-0" : ""
+                  isTaskUpdating || isHandling ? "opacity-0" : ""
                 }`}
-                // disabled={isHandling || isUpdating}
               />
-              {isUpdating && (
+              {isTaskUpdating && (
                 <LoadingSpinner className="absolute inset-0 top-1 h-4 w-4" />
               )}
             </div>
@@ -128,31 +166,47 @@ export function TaskCard({ task }: TaskCardProps) {
                   {task.title}
                 </h3>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-2">
+                  {task.subTasks && task.subTasks.length > 0 && (
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => setIsSubTasksOpen(!isSubTasksOpen)}
                       className="h-8 w-8 flex-shrink-0"
-                      disabled={isHandling}
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      {isSubTasksOpen ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleDelete}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 flex-shrink-0"
+                        disabled={isHandling}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleDelete}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               {task.description && (
@@ -195,6 +249,41 @@ export function TaskCard({ task }: TaskCardProps) {
                   </div>
                 )}
               </div>
+
+              {isSubTasksOpen && task.subTasks && task.subTasks.length > 0 && (
+                <div className="mt-4 space-y-2 pl-6">
+                  {task.subTasks.map((subTask) => (
+                    <div key={subTask._id} className="flex items-center gap-2">
+                      <div className="relative">
+                        <Checkbox
+                          checked={subTask.status === "done"}
+                          onCheckedChange={(checked) =>
+                            handleSubTaskStatusChange(
+                              subTask._id,
+                              checked as boolean
+                            )
+                          }
+                          className={`mt-1 ${
+                            updatingSubTaskId === subTask._id ? "opacity-0" : ""
+                          }`}
+                        />
+                        {updatingSubTaskId === subTask._id && (
+                          <LoadingSpinner className="absolute inset-0 top-1 h-4 w-4" />
+                        )}
+                      </div>
+                      <p
+                        className={cn(
+                          "text-sm",
+                          subTask.status === "done" &&
+                            "line-through text-muted-foreground"
+                        )}
+                      >
+                        {subTask.title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
