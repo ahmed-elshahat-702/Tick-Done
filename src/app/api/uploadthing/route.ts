@@ -1,5 +1,4 @@
 import { auth } from "@/app/auth";
-import { createRouteHandler } from "uploadthing/next";
 import { UTApi } from "uploadthing/server";
 
 const utapi = new UTApi();
