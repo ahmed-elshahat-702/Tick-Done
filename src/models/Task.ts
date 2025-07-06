@@ -29,6 +29,10 @@ const TaskSchema: Schema = new Schema<TTask>(
     dueDate: { type: Date, required: false },
     tag: { type: String },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "TaskCategory",
+    },
     subTasks: [SubTaskSchema],
   },
   {

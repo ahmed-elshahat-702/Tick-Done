@@ -15,6 +15,7 @@ export const taskSchema = z.object({
       })
     )
     .optional(),
+  categoryId: z.string().nullable().optional(),
 });
 
 export type TaskFormData = z.infer<typeof taskSchema>;

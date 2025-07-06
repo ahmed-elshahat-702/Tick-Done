@@ -34,7 +34,7 @@ import {
 } from "@/actions/tasks";
 
 interface TaskCardProps {
-  task: TTask;
+  task: TTask & { categoryName?: string; categoryColor?: string }; // Extend TTask with optional category fields
 }
 
 const priorityColors = {
@@ -129,7 +129,7 @@ export function TaskCard({ task }: TaskCardProps) {
       await removeTask(task._id);
       toast(res?.success);
     } catch (error) {
-      toast(`Failed to delete task status. Please try again.`);
+      toast(`Failed to delete task. Please try again.`);
       console.error(error);
     } finally {
       setIsHandling(false);
@@ -227,6 +227,20 @@ export function TaskCard({ task }: TaskCardProps) {
               )}
 
               <div className="flex items-center gap-2 flex-wrap">
+                {task.categoryName && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs"
+                    style={{
+                      backgroundColor: `${task.categoryColor}20`, // 20% opacity for background
+                      color: task.categoryColor,
+                      borderColor: task.categoryColor,
+                    }}
+                  >
+                    {task.categoryName}
+                  </Badge>
+                )}
+
                 <Badge
                   variant="secondary"
                   className={cn("text-xs", priorityColors[task.priority])}

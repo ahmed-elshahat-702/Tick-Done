@@ -4,6 +4,7 @@ import { auth } from "@/app/auth";
 import connectDB from "@/lib/mongodb";
 import { Task } from "@/models/Task";
 import { User } from "@/models/User";
+import { TaskCategory } from "@/models/TaskCategory";
 import { TaskFormData } from "@/validation/Task";
 import { revalidatePath } from "next/cache";
 import { toPlainObject } from "../lib/utils";
@@ -39,6 +40,17 @@ export async function createTask(taskData: TaskFormData) {
       return { error: "Task with this title already exists." };
     }
 
+    // Validate categoryId if provided
+    if (taskData.categoryId) {
+      const category = await TaskCategory.findOne({
+        _id: taskData.categoryId,
+        userId: user._id,
+      });
+      if (!category) {
+        return { error: "Invalid category" };
+      }
+    }
+
     // Check for duplicate sub-task titles
     if (taskData.subTasks && taskData.subTasks.length > 0) {
       const subTaskTitles = taskData.subTasks.map((subTask) =>
@@ -52,12 +64,13 @@ export async function createTask(taskData: TaskFormData) {
       }
     }
 
-    // Create task with sub-tasks
+    // Create task with sub-tasks and category
     const task = await Task.create({
       ...taskData,
       title: trimTitle(taskData.title),
       userId: user._id,
       subTasks: taskData.subTasks || [],
+      categoryId: taskData.categoryId || null,
     });
 
     revalidatePath("/");
@@ -99,6 +112,17 @@ export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
       return { error: "Task with this title already exists." };
     }
 
+    // Validate categoryId if provided
+    if (taskData.categoryId) {
+      const category = await TaskCategory.findOne({
+        _id: taskData.categoryId,
+        userId: user._id,
+      });
+      if (!category) {
+        return { error: "Invalid category" };
+      }
+    }
+
     // Check for duplicate sub-task titles
     if (taskData.subTasks && taskData.subTasks.length > 0) {
       const subTaskTitles = taskData.subTasks.map((subTask) =>
@@ -112,13 +136,14 @@ export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
       }
     }
 
-    // Update task with sub-tasks
+    // Update task with sub-tasks and category
     const task = await Task.findByIdAndUpdate(
       taskId,
       {
         ...taskData,
         title: trimTitle(taskData.title),
         subTasks: taskData.subTasks || [],
+        categoryId: taskData.categoryId || null,
       },
       { new: true, runValidators: true }
     );
@@ -256,15 +281,18 @@ export async function deleteUserTasks() {
     }
 
     await connectDB();
-    const result = await Task.deleteMany({ userId: session.user.id });
+    const [taskResult, categoryResult] = await Promise.all([
+      Task.deleteMany({ userId: session.user.id }),
+      TaskCategory.deleteMany({ userId: session.user.id }), // Delete all user categories
+    ]);
 
     revalidatePath("/");
 
     return {
-      success: `Deleted ${result.deletedCount} tasks for user.`,
+      success: `Deleted ${taskResult.deletedCount} tasks and ${categoryResult.deletedCount} categories for user.`,
     };
   } catch (error) {
-    console.error("Failed to delete user tasks:", error);
-    return { error: "Failed to delete user tasks" };
+    console.error("Failed to delete user tasks and categories:", error);
+    return { error: "Failed to delete user tasks and categories" };
   }
 }

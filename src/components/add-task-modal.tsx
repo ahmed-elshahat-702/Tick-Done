@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createTask, UpdateTask } from "@/actions/tasks";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import { CalendarIcon, Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
+import { Badge } from "./ui/badge";
 
 interface AddTaskModalProps {
   open: boolean;
@@ -51,7 +52,8 @@ interface AddTaskModalProps {
 }
 
 export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
-  const { addTask, editTask, isHandling, setIsHandling } = useTaskStore();
+  const { addTask, editTask, isHandling, setIsHandling, categories } =
+    useTaskStore();
   const isEditing = !!task;
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
@@ -65,8 +67,36 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
       tag: task?.tag || "",
       subTasks: task?.subTasks || [],
+      categoryId: task?.categoryId?.toString() ?? null,
     },
   });
+
+  // Reset form when task changes (for editing)
+  useEffect(() => {
+    if (task) {
+      form.reset({
+        title: task.title,
+        description: task.description || "",
+        priority: task.priority || "medium",
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        tag: task.tag || "",
+        subTasks: task.subTasks || [],
+        categoryId: task.categoryId?.toString() ?? null,
+      });
+      setSubTasks(task.subTasks || []);
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: undefined,
+        tag: "",
+        subTasks: [],
+        categoryId: null,
+      });
+      setSubTasks([]);
+    }
+  }, [task, form]);
 
   const addSubTask = () => {
     if (!newSubTaskTitle.trim()) {
@@ -74,7 +104,6 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
       return;
     }
 
-    // Check for duplicate sub-task title
     if (
       subTasks.some(
         (subTask) =>
@@ -112,7 +141,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
             toast(res.error);
           }
           if (res?.success && res?.task) {
-            await editTask(task._id, taskData);
+            await editTask(task._id, res.task);
             toast(res.success);
             form.reset({
               title: res?.task?.title || "",
@@ -123,6 +152,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                 : undefined,
               tag: res?.task?.tag || "",
               subTasks: res?.task?.subTasks || [],
+              categoryId: res?.task?.categoryId?.toString() ?? null,
             });
           }
         } catch (error) {
@@ -149,8 +179,17 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
           setIsHandling(false);
         }
       }
-      form.reset();
+      form.reset({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: undefined,
+        tag: "",
+        subTasks: [],
+        categoryId: null,
+      });
       setSubTasks([]);
+      setNewSubTaskTitle("");
       onOpenChange(false);
     } catch (error) {
       toast(`Something went wrong. Please try again.`);
@@ -160,7 +199,15 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
 
   const handleClose = () => {
     if (!isHandling) {
-      form.reset();
+      form.reset({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: undefined,
+        tag: "",
+        subTasks: [],
+        categoryId: null,
+      });
       setSubTasks(task?.subTasks || []);
       setNewSubTaskTitle("");
       onOpenChange(false);
@@ -237,24 +284,32 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
               {subTasks.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {subTasks.map((subTask) => (
-                    <div key={subTask._id} className="flex items-center gap-2">
-                      <span className="text-sm">{subTask.title}</span>
+                    <Badge
+                      variant="secondary"
+                      key={subTask._id}
+                      className="group flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs transition hover:bg-muted/80"
+                    >
+                      <span className="text-sm text-foreground">
+                        {subTask.title}
+                      </span>
+
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="h-4 w-4 p-0 text-muted-foreground transition hover:text-destructive hover:bg-destructive/10 ml-1"
                         onClick={() => removeSubTask(subTask._id)}
                         disabled={isHandling}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3 w-3" />
                       </Button>
-                    </div>
+                    </Badge>
                   ))}
                 </div>
               )}
             </FormItem>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="priority"
@@ -267,7 +322,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                       disabled={isHandling}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                       </FormControl>
@@ -320,6 +375,41 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        field.onChange(value === "none" ? null : value)
+                      }
+                      defaultValue={field.value || "none"}
+                      disabled={isHandling}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem
+                            key={category._id?.toString()}
+                            value={category._id?.toString()}
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

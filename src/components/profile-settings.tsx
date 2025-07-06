@@ -25,7 +25,6 @@ import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import Cropper, { Area } from "react-easy-crop";
-import * as z from "zod";
 import {
   Dialog,
   DialogContent,
@@ -36,25 +35,8 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { LoadingSpinner } from "./layout/loading-spinner";
-import { v4 as uuidv4 } from 'uuid';
-
-// Schema for password change
-const schema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(6, "New password must be at least 6 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your new password"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  })
-  .refine((data) => data.currentPassword !== data.newPassword, {
-    message: "New password must be different from current password",
-    path: ["newPassword"],
-  });
+import { v4 as uuidv4 } from "uuid";
+import { userPasswordSchema } from "@/validation/User";
 
 export function ProfileSettings() {
   const [isEditing, setIsEditing] = useState(false);
@@ -94,7 +76,7 @@ export function ProfileSettings() {
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(userPasswordSchema),
   });
 
   // Update local state when user changes (e.g., after login)
@@ -173,9 +155,9 @@ export function ProfileSettings() {
     if (!files?.[0]) return;
 
     const file = files[0];
-    
+
     // Validate file type
-    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+    if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
       toast.error("Only JPEG, PNG, or GIF images are allowed");
       return;
     }
@@ -193,7 +175,7 @@ export function ProfileSettings() {
     };
     reader.readAsDataURL(file);
 
-    // Reset file input to allow reselecting the same file
+    // Reset file input to allow re-selecting the same file
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -210,7 +192,10 @@ export function ProfileSettings() {
     setError("");
 
     try {
-      const croppedImageFile = await getCroppedImage(imageToCrop, croppedAreaPixels);
+      const croppedImageFile = await getCroppedImage(
+        imageToCrop,
+        croppedAreaPixels
+      );
       const oldImageUrl = image;
 
       // Upload cropped image
@@ -257,9 +242,11 @@ export function ProfileSettings() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ fileKey }),
           });
-          
+
           if (!deleteResponse.ok) {
-            console.error("Failed to delete old image, but profile updated successfully");
+            console.error(
+              "Failed to delete old image, but profile updated successfully"
+            );
           }
         }
       }
@@ -328,7 +315,8 @@ export function ProfileSettings() {
         await signOut({ callbackUrl: "/auth/signin" });
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Password change failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "Password change failed";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -355,7 +343,9 @@ export function ProfileSettings() {
           if (!deleteResponse.ok) {
             const errorData = await deleteResponse.json();
             console.error("Image deletion failed:", errorData);
-            throw new Error(errorData.error || "Failed to delete profile image");
+            throw new Error(
+              errorData.error || "Failed to delete profile image"
+            );
           }
 
           const deleteResult = await deleteResponse.json();

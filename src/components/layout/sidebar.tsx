@@ -8,6 +8,7 @@ import {
   Calendar,
   CheckCircle,
   Home,
+  ListTree,
   LogOut,
   Menu,
   Moon,
@@ -30,6 +31,7 @@ const navigation = [
   { id: "today", label: "Today", icon: CheckCircle },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "completed", label: "Completed", icon: CheckCircle },
+  { id: "categories", label: "Categories", icon: ListTree },
 ];
 
 export function Sidebar({ activeView, onViewChange }: SidebarProps) {

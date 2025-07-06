@@ -6,6 +6,7 @@ TickDone is a modern, full-stack task management application built with Next.js,
 
 - **User Authentication**: Sign up and sign in with email/password, Google, or GitHub.
 - **Task Management**: Create, update, delete, and view tasks with priorities, statuses, due dates, and tags.
+- **Task Categories**: Organize tasks under custom categories with support for nested (parent/child) relationships.
 - **Productivity Dashboard**: Visualize task completion rates and productivity stats.
 - **Calendar View**: See tasks in a calendar format for better planning.
 - **Profile Management**: Edit profile info, upload/crop profile images, and change passwords.
@@ -27,11 +28,11 @@ TickDone is a modern, full-stack task management application built with Next.js,
 
 - `src/app/` – Next.js app directory (routing, pages, API endpoints)
 - `src/components/` – Reusable UI and layout components
-- `src/models/` – Mongoose models for MongoDB
-- `src/types/` – TypeScript types and interfaces
-- `src/actions/` – Server actions for tasks and users
-- `src/lib/` – Utilities, database connection, state store
-- `src/validation/` – Zod schemas for validation
+- `src/models/` – Mongoose models for MongoDB (includes `Task`, `User`, `TaskCategory`)
+- `src/types/` – TypeScript types and interfaces (includes `task.ts`, `category.ts`, `user.ts`)
+- `src/actions/` – Server actions for tasks, users, and task categories
+- `src/lib/` – Utilities, database connection, Zustand stores (including `useTaskStore`)
+- `src/validation/` – Zod schemas for validation (task, user, category)
 - `public/` – Static assets (images, icons)
 
 ## Getting Started

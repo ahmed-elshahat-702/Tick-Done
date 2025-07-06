@@ -1,12 +1,14 @@
 "use client";
 
 import { TTask } from "@/types/task";
+import { TCategory } from "@/types/category";
 import { ObjectId } from "mongoose";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface TaskStore {
   tasks: TTask[];
+  categories: TCategory[];
   isLoading: boolean;
   isHandling: boolean;
   setIsLoading: (state: boolean) => void;
@@ -16,6 +18,8 @@ interface TaskStore {
   addTask: (task: TTask) => void;
   editTask: (id: ObjectId, data: Partial<TTask>) => Promise<void>;
   removeTask: (id: ObjectId) => Promise<void>;
+  setCategories: (newCategories: TCategory[]) => void;
+  addCategory: (category: TCategory) => void;
   clearError: () => void;
 }
 
@@ -23,6 +27,7 @@ export const useTaskStore = create<TaskStore>()(
   persist(
     (set) => ({
       tasks: [],
+      categories: [],
       isLoading: false,
       isHandling: false,
       setIsLoading: (state) => {
@@ -54,11 +59,21 @@ export const useTaskStore = create<TaskStore>()(
         }));
       },
 
+      setCategories: async (newCategories) => {
+        set({ categories: newCategories });
+      },
+      addCategory: async (category) => {
+        set((state) => ({ categories: [...state.categories, category] }));
+      },
+
       clearError: () => set({ error: null }),
     }),
     {
       name: "tick-done-storage",
-      partialize: (state) => ({ tasks: state.tasks }),
+      partialize: (state) => ({
+        tasks: state.tasks,
+        categories: state.categories,
+      }),
     }
   )
 );

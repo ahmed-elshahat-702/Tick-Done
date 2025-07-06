@@ -16,6 +16,7 @@ export interface TTask {
   tag?: string;
   createdAt: Date;
   updatedAt: Date;
-  userId?: ObjectId;
+  userId: ObjectId;
+  categoryId?: ObjectId;
   subTasks?: SubTask[];
 }
