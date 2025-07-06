@@ -60,6 +60,9 @@ export function TaskCard({ task }: TaskCardProps) {
   );
   const [isSubTasksOpen, setIsSubTasksOpen] = useState(false);
 
+  const dingAudio =
+    typeof Audio !== "undefined" ? new Audio("/sounds/check.mp3") : null;
+
   const handleStatusChange = async (checked: boolean) => {
     try {
       setIsTaskUpdating(true);
@@ -76,6 +79,10 @@ export function TaskCard({ task }: TaskCardProps) {
             ? "Great job on completing this task."
             : "Task moved back to todo."
         );
+        if (checked && dingAudio) {
+          dingAudio.currentTime = 0;
+          dingAudio.play().catch((e) => console.warn("Audio play failed:", e));
+        }
       }
     } catch (error) {
       toast(`Failed to update task status. Please try again.`);
@@ -99,6 +106,10 @@ export function TaskCard({ task }: TaskCardProps) {
       if (res?.success && res?.task) {
         await editTask(task._id, { subTasks: res.task.subTasks });
         toast(checked ? "Sub-task completed!" : "Sub-task marked as todo.");
+        if (checked && dingAudio) {
+          dingAudio.currentTime = 0;
+          dingAudio.play().catch((e) => console.warn("Audio play failed:", e));
+        }
       }
     } catch (error) {
       toast(`Failed to update sub-task status. Please try again.`);
