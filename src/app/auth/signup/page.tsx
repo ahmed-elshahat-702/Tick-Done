@@ -20,14 +20,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Github } from "lucide-react";
-import { signIn, useSession } from "next-auth/react";
-import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import ProvidersButtons from "../ProvidersButtons";
 
 const signupSchema = z
   .object({
@@ -94,29 +94,6 @@ export default function SignUpPage() {
       );
     } catch (error) {
       toast("Failed to create account. Please try again.");
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    try {
-      setIsLoading(true);
-      await signIn("google");
-    } catch (error) {
-      toast.error("An unexpected error occurred during Google sign-up.");
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  const handleGithubSignUp = async () => {
-    try {
-      setIsLoading(true);
-      await signIn("github");
-    } catch (error) {
-      toast.error("An unexpected error occurred during Github sign-up.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -267,36 +244,7 @@ export default function SignUpPage() {
           </div>
 
           {/* Providers */}
-          <div className="w-full grid md:grid-cols-2 items-center gap-4">
-            {/* Google Sign-up */}
-            <Button
-              variant="outline"
-              className="w-full flex item-center gap-2"
-              onClick={handleGoogleSignUp}
-              disabled={isLoading}
-            >
-              <div className="relative w-5 h-5 mr-2">
-                <Image
-                  src="/google-logo.svg"
-                  alt="Google"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              Sign up with Google
-            </Button>
-
-            {/* Github Sign-up */}
-            <Button
-              variant="outline"
-              className="w-full flex item-center gap-2"
-              onClick={handleGithubSignUp}
-              disabled={isLoading}
-            >
-              <Github className="w-5 h-5 mr-2" />
-              Sign up with Google
-            </Button>
-          </div>
+          <ProvidersButtons />
 
           {/* Sign in */}
           <div className="mt-6 text-center">
