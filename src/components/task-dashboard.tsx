@@ -80,7 +80,7 @@ export function TaskDashboard() {
     <div className="flex h-screen bg-background">
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden max-md:mt-16">
         <div className="flex-1 overflow-auto p-4 md:p-6">{renderContent()}</div>
 
         {activeView !== "categories" && (

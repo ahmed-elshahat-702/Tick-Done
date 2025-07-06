@@ -159,7 +159,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   return (
     <>
       {/* Mobile Menu Button */}
-      <div className="md:hidden w-full h-16 mx-auto px-6 bg-background fixed top-0 left-0 flex items-center justify-between shadow-sm">
+      <div className="md:hidden w-full h-16 mx-auto px-6 bg-background fixed top-0 left-0 flex items-center justify-between shadow-sm z-10">
         <Button
           variant="ghost"
           size="icon"
