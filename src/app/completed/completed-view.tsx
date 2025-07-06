@@ -1,5 +1,5 @@
-import React from "react";
-import CategoriesTabs from "./categories-tabs";
+"use client";
+import CategoriesTabs from "../../components/categories-tabs";
 import { useTaskStore } from "@/lib/store";
 
 const CompletedView = () => {

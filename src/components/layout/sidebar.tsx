@@ -2,7 +2,7 @@
 
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Calendar,
@@ -20,21 +20,20 @@ import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import Logo from "./logo";
-
-interface SidebarProps {
-  activeView: string;
-  onViewChange: (view: string) => void;
-}
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const navigation = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "today", label: "Today", icon: CheckCircle },
-  { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "completed", label: "Completed", icon: CheckCircle },
-  { id: "categories", label: "Categories", icon: ListTree },
+  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/today", label: "Today", icon: CheckCircle },
+  { href: "/calendar", label: "Calendar", icon: Calendar },
+  { href: "/completed", label: "Completed", icon: CheckCircle },
+  { href: "/categories", label: "Categories", icon: ListTree },
 ];
 
-export function Sidebar({ activeView, onViewChange }: SidebarProps) {
+export function Sidebar() {
+  const pathname = usePathname();
+
   const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -51,11 +50,6 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
     }
   };
 
-  const handleViewChange = (view: string) => {
-    onViewChange(view);
-    setIsMobileOpen(false);
-  };
-
   const sidebarContent = (
     <>
       {/* Header */}
@@ -68,18 +62,20 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
         {navigation.map((item) => {
           const Icon = item.icon;
           return (
-            <Button
-              key={item.id}
-              variant={activeView === item.id ? "secondary" : "ghost"}
+            <Link
+              key={item.label.toLowerCase()}
+              href={item.href}
               className={cn(
+                buttonVariants({
+                  variant: pathname === item.href ? "secondary" : "ghost",
+                }),
                 "w-full justify-start gap-3 h-10",
-                activeView === item.id && "bg-secondary"
+                pathname === item.href && "bg-secondary"
               )}
-              onClick={() => handleViewChange(item.id)}
             >
               <Icon className="w-4 h-4" />
               {item.label}
-            </Button>
+            </Link>
           );
         })}
       </nav>
@@ -99,14 +95,18 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
           Toggle Theme
         </Button>
 
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 h-10"
-          onClick={() => handleViewChange("profile")}
+        <Link
+          href="/profile"
+          className={cn(
+            buttonVariants({
+              variant: "ghost",
+            }),
+            "w-full justify-start gap-3 h-10"
+          )}
         >
           <User className="w-4 h-4" />
           Profile
-        </Button>
+        </Link>
 
         <Button
           variant="ghost"

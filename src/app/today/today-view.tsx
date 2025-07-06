@@ -1,5 +1,7 @@
+"use client";
+
 import { useTaskStore } from "@/lib/store";
-import CategoriesTabs from "./categories-tabs";
+import CategoriesTabs from "@/components/categories-tabs";
 
 const TodayView = () => {
   const { tasks } = useTaskStore();

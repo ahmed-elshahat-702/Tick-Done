@@ -4,21 +4,16 @@ import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/sidebar";
-import { TaskList } from "@/components/task-view";
 import { AddTaskModal } from "@/components/add-task-modal";
-import { CalendarView } from "@/components/calendar-view";
-import { ProfileSettings } from "@/components/profile-settings";
 import { useTaskStore } from "@/lib/store";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { toast } from "sonner";
-import CategoryList from "./category-list";
-import TodayView from "./today-view";
-import CompletedView from "./completed-view";
+import { usePathname } from "next/navigation";
 
-export function TaskDashboard() {
-  const [activeView, setActiveView] = useState("dashboard");
+export function TaskDashboard({ children }: { children: React.ReactNode }) {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const { isLoading, setIsLoading, error, setTasks } = useTaskStore();
+  const pathname = usePathname();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -48,42 +43,25 @@ export function TaskDashboard() {
     }
   }, [error]);
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center space-y-4">
-            <LoadingSpinner className="h-8 w-8 mx-auto" />
-            <p className="text-muted-foreground">Loading your tasks...</p>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-screen">
+        <div className="text-center space-y-4">
+          <LoadingSpinner className="h-8 w-8 mx-auto" />
+          <p className="text-muted-foreground">Loading your tasks...</p>
         </div>
-      );
-    }
-
-    switch (activeView) {
-      case "today":
-        return <TodayView />;
-      case "completed":
-        return <CompletedView />;
-      case "calendar":
-        return <CalendarView />;
-      case "categories":
-        return <CategoryList />;
-      case "profile":
-        return <ProfileSettings />;
-      default:
-        return <TaskList />;
-    }
-  };
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      <Sidebar />
 
       <main className="flex-1 flex flex-col overflow-hidden max-md:mt-16">
-        <div className="flex-1 overflow-auto p-4 md:p-6">{renderContent()}</div>
+        <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
 
-        {activeView !== "categories" && (
+        {pathname !== "/categories" && (
           <Button
             onClick={() => setIsAddTaskOpen(true)}
             className="fixed bottom-4 right-4 md:bottom-6 md:right-6 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50"

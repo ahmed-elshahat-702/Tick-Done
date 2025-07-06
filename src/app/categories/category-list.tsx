@@ -40,7 +40,7 @@ import {
 import { TCategory } from "@/types/category";
 import { CategoryFormData, categorySchema } from "@/validation/Category";
 
-import CategoryCard from "./category-card";
+import CategoryCard from "@/components/category-card";
 
 const CategoryList = () => {
   const { categories, setCategories, addCategory } = useTaskStore();
@@ -125,7 +125,7 @@ const CategoryList = () => {
           }}
         >
           <DialogTrigger asChild>
-            <Button variant="default" className="px-4 py-2 rounded-lg">
+            <Button>
               {editingCategory ? "Edit Category" : "Add Category"}
             </Button>
           </DialogTrigger>

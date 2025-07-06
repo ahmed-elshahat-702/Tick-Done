@@ -3,7 +3,7 @@
 import { useTaskStore } from "@/lib/store";
 import CategoriesTabs from "./categories-tabs";
 
-export function TaskList() {
+export function TaskView() {
   const { tasks } = useTaskStore();
 
   return (

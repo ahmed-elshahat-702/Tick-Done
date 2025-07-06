@@ -33,8 +33,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { LoadingSpinner } from "./layout/loading-spinner";
+} from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { v4 as uuidv4 } from "uuid";
 import { userPasswordSchema } from "@/validation/User";
 

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TaskDashboard } from "@/components/task-dashboard";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
+import { TaskView } from "@/components/task-view";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -31,7 +32,6 @@ export default function Home() {
     );
   }
 
-  // Check unauthenticated last
   if (status === "unauthenticated") {
     return (
       <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -43,5 +43,9 @@ export default function Home() {
     );
   }
 
-  return <TaskDashboard />;
+  return (
+    <TaskDashboard>
+      <TaskView />
+    </TaskDashboard>
+  );
 }
