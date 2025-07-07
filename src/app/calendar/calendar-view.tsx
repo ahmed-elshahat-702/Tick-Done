@@ -155,7 +155,9 @@ export function CalendarView() {
                 <div className="space-y-3">
                   {selectedTasks.map((task) => (
                     <div key={`${task._id}`} className="p-3 border rounded-lg">
-                      <h4 className="font-medium text-sm">{task.title}</h4>
+                      <h4 className="font-medium text-sm truncate line-clamp-1">
+                        {task.title}
+                      </h4>
                       {task.description && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {task.description}

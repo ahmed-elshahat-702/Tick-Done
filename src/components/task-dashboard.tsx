@@ -17,9 +17,7 @@ import {
 export function TaskDashboard({ children }: { children: React.ReactNode }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [modalType, setModalType] = useState<
-    "task" | "category" | "choice" | undefined
-  >(undefined);
+  const [modalType, setModalType] = useState<"task" | "category" | null>(null);
   const { isLoading, setIsLoading, error, setTasks } = useTaskStore();
 
   useEffect(() => {
@@ -91,9 +89,9 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setIsPopoverOpen(false);
                   setModalType("task");
                   setIsAddModalOpen(true);
+                  setIsPopoverOpen(false);
                 }}
                 className="w-full justify-start px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
@@ -104,9 +102,9 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setIsPopoverOpen(false);
                   setModalType("category");
                   setIsAddModalOpen(true);
+                  setIsPopoverOpen(false);
                 }}
                 className="w-full justify-start px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >

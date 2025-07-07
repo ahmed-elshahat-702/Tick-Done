@@ -64,17 +64,20 @@ export function MultiSelect({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className="w-full justify-between text-left whitespace-normal break-words"
             disabled={disabled}
           >
-            {selected.length > 0
-              ? selected.map((s) => s.label).join(", ")
-              : placeholder}
+            <span className="break-words break-all line-clamp-1">
+              {selected.length > 0
+                ? selected.map((s) => s.label).join(", ")
+                : placeholder}
+            </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
-          <Command>
+
+        <PopoverContent className="max-w-full">
+          <Command className="max-w-full">
             <CommandInput placeholder="Search..." />
             <CommandEmpty>No options found.</CommandEmpty>
             <ScrollArea className="max-h-48">
@@ -87,14 +90,14 @@ export function MultiSelect({
                     <CommandItem
                       key={option.value}
                       onSelect={() => toggleOption(option)}
-                      className="cursor-pointer"
+                      className="cursor-pointer break-words whitespace-normal"
                     >
-                      <span className="flex items-center justify-between w-full">
-                        {option.label}
+                      <div className="flex w-full items-center justify-between break-all whitespace-normal">
+                        <span className="break-all">{option.label}</span>
                         {isSelected && (
-                          <Check className="h-4 w-4 text-primary" />
+                          <Check className="ml-2 h-4 w-4 text-primary shrink-0" />
                         )}
-                      </span>
+                      </div>
                     </CommandItem>
                   );
                 })}
@@ -109,9 +112,9 @@ export function MultiSelect({
           <Badge
             key={item.value}
             variant="secondary"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 max-w-full break-words whitespace-normal px-2 py-1"
           >
-            {item.label}
+            <span className="break-all">{item.label}</span>
             <button
               type="button"
               onClick={() => removeOption(item.value)}

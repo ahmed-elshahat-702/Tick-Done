@@ -9,10 +9,9 @@ import { useState } from "react";
 const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
   const { categories } = useTaskStore();
   const [activeTab, setActiveTab] = useState("all");
-  const [subTab, setSubTab] = useState<string | null>(null); // Separate state for sub-categories
-  const [showAllParentTasks, setShowAllParentTasks] = useState(true); // Toggle for parent category view
+  const [subTab, setSubTab] = useState<string | null>(null);
+  const [showAllParentTasks, setShowAllParentTasks] = useState(true);
 
-  // Map tasks with category name and color
   const mappedTasks = tasks.map((task) => ({
     ...task,
     categoryName: categories.find((c) => c._id === task.categoryId)?.name,
@@ -20,16 +19,13 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
       categories.find((c) => c._id === task.categoryId)?.color || "#000000",
   }));
 
-  // Get top-level categories
   const topLevelCategories = categories.filter(
     (category) => !category.parentId
   );
 
-  // Get sub-categories for a given category ID
   const getSubCategories = (parentId: string) =>
     categories.filter((c) => c.parentId === parentId);
 
-  // Filter tasks based on the active tab and sub-tab
   const filteredTasks = mappedTasks.filter((task) => {
     if (activeTab === "all") {
       return true;
@@ -45,7 +41,6 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
     if (subTab === "only" && activeTab === `category-${activeCategoryId}`) {
       return task.categoryId === activeCategoryId;
     }
-    // For parent category, show all tasks if showAllParentTasks is true, otherwise only direct tasks
     if (activeTab === `category-${activeCategoryId}`) {
       if (showAllParentTasks) {
         const subCategoryIds = getSubCategories(activeCategoryId).map(
@@ -61,12 +56,11 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
     return false;
   });
 
-  // Toggle showAllParentTasks when parent tab is reselected
   const handleTabChange = (value: string) => {
     if (value === activeTab && value.startsWith("category-") && !subTab) {
       setShowAllParentTasks(!showAllParentTasks);
     } else {
-      setShowAllParentTasks(true); // Default to showing all tasks when switching tabs
+      setShowAllParentTasks(true);
     }
     setActiveTab(value);
   };
@@ -77,7 +71,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
       !value.startsWith("subcategory-") &&
       value !== "only"
     ) {
-      setSubTab(null); // Reset subTab when switching away from sub-tabs or "only"
+      setSubTab(null);
     } else {
       setSubTab(value);
     }
@@ -92,14 +86,18 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
     >
       <div className="space-y-2">
         <h5 className="text-sm font-semibold">Categories</h5>
-        <TabsList className="flex flex-wrap gap-2">
+        <TabsList className="h-fit flex items-start gap-2 flex-wrap justify-start">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="category-uncategorized">
             Uncategorized
           </TabsTrigger>
           {topLevelCategories.map((category) => (
-            <TabsTrigger key={category._id} value={`category-${category._id}`}>
-              {category.name}
+            <TabsTrigger
+              key={category._id}
+              value={`category-${category._id}`}
+              className="max-w-50"
+            >
+              <span className="truncate line-clamp-1">{category.name}</span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -144,13 +142,13 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
             <div className="space-y-4">
               {subCategories.length > 0 && (
                 <Tabs
-                  value={subTab || `category-${category._id}`} // Default to parent category tab
+                  value={subTab || `category-${category._id}`}
                   onValueChange={handleSubTabChange}
                   className="space-y-4"
                 >
                   <div className="space-y-2">
                     <h5 className="text-sm font-semibold">Sub Categories</h5>
-                    <TabsList className="flex flex-wrap gap-2">
+                    <TabsList className="h-fit flex items-start gap-2 flex-wrap justify-start">
                       <TabsTrigger value={`category-${category._id}`}>
                         {showAllParentTasks ? "All" : "(Direct)"}
                       </TabsTrigger>
@@ -161,8 +159,11 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
                         <TabsTrigger
                           key={subCategory._id}
                           value={`subcategory-${subCategory._id}`}
+                          className="max-w-50"
                         >
-                          {subCategory.name}
+                          <span className="truncate line-clamp-1">
+                            {subCategory.name}
+                          </span>
                         </TabsTrigger>
                       ))}
                     </TabsList>

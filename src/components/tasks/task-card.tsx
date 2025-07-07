@@ -144,7 +144,7 @@ export function TaskCard({ task }: TaskCardProps) {
     <>
       <Card
         className={cn(
-          "transition-all hover:shadow-md",
+          "w-full transition-all hover:shadow-md",
           task.status === "done" && "opacity-60",
           isOverdue && "border-red-200 dark:border-red-800",
           (isHandling || isTaskUpdating) && "opacity-50"
@@ -169,7 +169,7 @@ export function TaskCard({ task }: TaskCardProps) {
               <div className="flex items-start justify-between gap-2">
                 <h3
                   className={cn(
-                    "font-medium text-sm break-words",
+                    "font-medium text-sm  break-all",
                     task.status === "done" &&
                       "line-through text-muted-foreground"
                   )}
@@ -221,7 +221,7 @@ export function TaskCard({ task }: TaskCardProps) {
               </div>
 
               {task.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                <p className="text-sm text-muted-foreground line-clamp-2 break-all">
                   {task.description}
                 </p>
               )}
@@ -230,14 +230,14 @@ export function TaskCard({ task }: TaskCardProps) {
                 {task.categoryName && (
                   <Badge
                     variant="outline"
-                    className="text-xs"
+                    className="text-xs break-words whitespace-normal"
                     style={{
                       backgroundColor: `${task.categoryColor}20`, // 20% opacity for background
                       color: task.categoryColor,
                       borderColor: task.categoryColor,
                     }}
                   >
-                    {task.categoryName}
+                    <span className="break-all">{task.categoryName}</span>
                   </Badge>
                 )}
 
@@ -256,8 +256,11 @@ export function TaskCard({ task }: TaskCardProps) {
                 </Badge>
 
                 {task.tag && (
-                  <Badge variant="outline" className="text-xs">
-                    {task.tag}
+                  <Badge
+                    variant="outline"
+                    className="text-xs break-words whitespace-normal"
+                  >
+                    <span className="break-all">{task.tag}</span>
                   </Badge>
                 )}
 
@@ -298,7 +301,7 @@ export function TaskCard({ task }: TaskCardProps) {
                       </div>
                       <p
                         className={cn(
-                          "text-sm",
+                          "text-sm break-words whitespace-normal",
                           subTask.status === "done" &&
                             "line-through text-muted-foreground"
                         )}

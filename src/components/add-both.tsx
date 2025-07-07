@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import { createTask } from "@/actions/tasks";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
@@ -48,26 +48,32 @@ import { Badge } from "./ui/badge";
 import { MultiSelect } from "./ui/multi-select";
 import { createTaskCategory } from "@/actions/task-categories";
 
+type ModalType = "task" | "category" | null;
+
 interface AddBothProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialModal?: "task" | "category" | "choice";
+  initialModal?: ModalType;
 }
 
 export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
   const { addTask, isHandling, setIsHandling, categories, addCategory, tasks } =
     useTaskStore();
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(
-    initialModal === "task"
-  );
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(
-    initialModal === "category"
-  );
-  const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(
-    initialModal === "choice" || !initialModal
-  );
   const [subTasks, setSubTasks] = useState<SubTask[]>([]);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
+  const [activeModal, setActiveModal] = useState<ModalType>(
+    initialModal || null
+  );
+
+  // Sync activeModal with initialModal when dialog opens
+  useEffect(() => {
+    if (open && initialModal) {
+      setActiveModal(initialModal);
+    }
+  }, [open, initialModal]);
+
+  const isTaskModalOpen = activeModal === "task" && open;
+  const isCategoryModalOpen = activeModal === "category" && open;
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -82,7 +88,7 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
     },
   });
 
-  const categoryForm = useForm({
+  const categoryForm = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
@@ -92,25 +98,9 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
     },
   });
 
-  useEffect(() => {
-    if (initialModal === "task") {
-      setIsTaskModalOpen(true);
-      setIsCategoryModalOpen(false);
-      setIsChoiceModalOpen(false);
-    } else if (initialModal === "category") {
-      setIsTaskModalOpen(false);
-      setIsCategoryModalOpen(true);
-      setIsChoiceModalOpen(false);
-    } else {
-      setIsTaskModalOpen(false);
-      setIsCategoryModalOpen(false);
-      setIsChoiceModalOpen(true);
-    }
-  }, [initialModal]);
-
   const addSubTask = () => {
     if (!newSubTaskTitle.trim()) {
-      toast("Sub-task title cannot be empty.");
+      toast.error("Sub-task title cannot be empty.");
       return;
     }
     if (
@@ -119,7 +109,7 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
           subTask.title.toLowerCase() === newSubTaskTitle.trim().toLowerCase()
       )
     ) {
-      toast("A sub-task with this title already exists.");
+      toast.error("A sub-task with this title already exists.");
       return;
     }
     const newSubTask: SubTask = {
@@ -144,18 +134,21 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
       setIsHandling(true);
       const res = await createTask(taskData);
       if (res?.error) {
-        toast(res.error);
+        toast.error(res.error);
+        return;
       }
       if (res?.success && res?.task) {
         addTask(res.task);
-        toast(res.success);
+        toast.success(res.success);
+      } else {
+        toast.error("Failed to add task");
       }
       form.reset();
       setSubTasks([]);
       setNewSubTaskTitle("");
       onOpenChange(false);
     } catch (error) {
-      toast("Failed to add task");
+      toast.error("Failed to add task");
       console.error(error);
     } finally {
       setIsHandling(false);
@@ -175,14 +168,12 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
         }
         toast.success(res.success);
       } else {
-        toast.error(res.error || "Create failed");
+        toast.error(res.error || "Failed to create category");
       }
-      toast("Category added");
       categoryForm.reset();
-      setIsCategoryModalOpen(false);
       onOpenChange(false);
     } catch (error) {
-      toast("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
       console.error(error);
     } finally {
       setIsHandling(false);
@@ -192,47 +183,17 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
   const handleClose = () => {
     if (!isHandling) {
       form.reset();
+      categoryForm.reset();
       setSubTasks([]);
       setNewSubTaskTitle("");
+      setActiveModal(null);
       onOpenChange(false);
     }
   };
 
   return (
     <>
-      <Dialog
-        open={isChoiceModalOpen && open}
-        onOpenChange={(open) => {
-          setIsChoiceModalOpen(open);
-          if (!open) onOpenChange(false);
-        }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Add New</DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-center gap-4 py-4">
-            <Button
-              onClick={() => {
-                setIsChoiceModalOpen(false);
-                setIsTaskModalOpen(true);
-              }}
-            >
-              Add Task
-            </Button>
-            <Button
-              onClick={() => {
-                setIsChoiceModalOpen(false);
-                setIsCategoryModalOpen(true);
-              }}
-            >
-              Add Category
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isTaskModalOpen && open} onOpenChange={handleClose}>
+      <Dialog open={isTaskModalOpen} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
@@ -296,14 +257,14 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                   </Button>
                 </div>
                 {subTasks.length > 0 && (
-                  <div className="mt-2 space-y-2">
+                  <div className="w-full mt-2 flex items-center gap-2 flex-wrap">
                     {subTasks.map((subTask) => (
                       <Badge
                         variant="secondary"
                         key={subTask._id}
-                        className="group flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs transition hover:bg-muted/80"
+                        className="break-words whitespace-normal group flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs transition hover:bg-muted/80"
                       >
-                        <span className="text-sm text-foreground">
+                        <span className="max-w-full text-sm text-foreground break-all">
                           {subTask.title}
                         </span>
                         <Button
@@ -321,7 +282,7 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                   </div>
                 )}
               </FormItem>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="priority"
@@ -390,38 +351,44 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(value === "none" ? null : value)
-                        }
-                        defaultValue={field.value || "none"}
-                        disabled={isHandling}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category._id} value={category._id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem className="w-full">
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        field.onChange(value === "none" ? null : value)
+                      }
+                      defaultValue={field.value || "none"}
+                      disabled={isHandling}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem
+                            key={category._id}
+                            value={category._id}
+                            className="text-sm"
+                          >
+                            <span className="truncate max-w-64 sm:max-w-90">
+                              {category.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="tag"
@@ -470,14 +437,8 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
       </Dialog>
 
       <Dialog
-        open={isCategoryModalOpen && open}
-        onOpenChange={(open) => {
-          setIsCategoryModalOpen(open);
-          if (!open) {
-            categoryForm.reset();
-            onOpenChange(false);
-          }
-        }}
+        open={isCategoryModalOpen}
+        onOpenChange={(o) => !o && handleClose()}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -519,17 +480,27 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                       disabled={isHandling}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose parent..." />
+                        <SelectTrigger className="w-full line-clamp-1 truncate">
+                          <SelectValue placeholder="Select parent category..." />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
+                      <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[--radix-select-content-available-height]">
+                        <SelectItem value="none" className="text-sm">
+                          <span className="truncate">
+                            None (Top-level category)
+                          </span>
+                        </SelectItem>
                         {categories
                           .filter((c) => !c.parentId || c.parentId === null)
                           .map((cat) => (
-                            <SelectItem key={cat._id} value={cat._id}>
-                              {cat.name}
+                            <SelectItem
+                              key={cat._id}
+                              value={cat._id}
+                              className="text-sm"
+                            >
+                              <span className="truncate max-w-64 sm:max-w-90">
+                                {cat.name}
+                              </span>
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -597,11 +568,7 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    categoryForm.reset();
-                    setIsCategoryModalOpen(false);
-                    onOpenChange(false);
-                  }}
+                  onClick={handleClose}
                   disabled={isHandling}
                 >
                   Cancel

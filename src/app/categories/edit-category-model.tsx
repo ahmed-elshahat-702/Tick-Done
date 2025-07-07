@@ -202,12 +202,18 @@ const EditCategoryModel = ({
                     disabled={isHandling}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose parent..." />
+                      <SelectTrigger className="w-full line-clamp-1 truncate">
+                        <SelectValue placeholder="Select parent category..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
+
+                    <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[--radix-select-content-available-height]">
+                      <SelectItem value="none" className="text-sm">
+                        <span className="truncate">
+                          None (Top-level category)
+                        </span>
+                      </SelectItem>
+
                       {categories
                         .filter(
                           (c) =>
@@ -216,8 +222,14 @@ const EditCategoryModel = ({
                             (!c.parentId || c.parentId === null)
                         )
                         .map((cat) => (
-                          <SelectItem key={cat._id} value={cat._id}>
-                            {cat.name}
+                          <SelectItem
+                            key={cat._id}
+                            value={cat._id}
+                            className="text-sm"
+                          >
+                            <span className="truncate max-w-64 sm:max-w-90">
+                              {cat.name}
+                            </span>
                           </SelectItem>
                         ))}
                     </SelectContent>

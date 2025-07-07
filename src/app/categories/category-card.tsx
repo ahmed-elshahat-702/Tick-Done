@@ -84,9 +84,9 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
     }
   };
 
-  const parentName = category.parentId
-    ? categories.find((c) => c._id === category.parentId)?.name || "Unknown"
-    : null;
+  // const parentName = category.parentId
+  //   ? categories.find((c) => c._id === category.parentId)?.name || "Unknown"
+  //   : null;
 
   // Find sub-categories where parentId matches the current category's _id
   const subCategories = categories.filter((c) => c.parentId === category._id);
@@ -112,6 +112,7 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
   const deleteSubCategories = categoryToDelete
     ? categories.filter((c) => c.parentId === categoryToDelete._id)
     : [];
+
   return (
     <div className="relative bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow duration-300 w-full">
       {/* Actions (Top Right) */}
@@ -145,15 +146,16 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
           style={{ backgroundColor: category.color || "#000000" }}
           aria-label={`Category color for ${category.name}`}
         />
-        <div className="flex flex-col">
-          <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+        <div className="flex flex-col break-words whitespace-normal">
+          <h3 className="text-base sm:text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate max-w-[220px] block">
             {category.name}
           </h3>
+          {/* 
           {parentName && (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 italic break-words leading-tight">
               Parent: {parentName}
             </span>
-          )}
+          )} */}
         </div>
       </div>
 
@@ -203,8 +205,11 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                       }}
                       aria-label={`Sub-category color for ${subCategory.name}`}
                     />
-                    <span className="truncate">{subCategory.name}</span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="truncate block max-w-[120px]">
+                      {subCategory.name}
+                    </span>
+
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                       (
                       {
                         tasks.filter(
@@ -267,7 +272,10 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                   key={task._id}
                   className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700/50 rounded-md p-2"
                 >
-                  <span className="font-medium truncate">{task.title}</span>
+                  <span className="font-medium truncate max-w-[200px] block">
+                    {task.title}
+                  </span>
+
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${
                       task.status === "done"
@@ -299,30 +307,51 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete {categoryToDelete.name}</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete the category &quot;
-                {categoryToDelete.name}&quot;?
+              <DialogTitle className="text-base sm:text-lg font-semibold text-destructive truncate max-w-[90%] flex items-center gap-2">
+                Delete:
+                <span className="truncate block max-w-40 md:max-w-60">
+                  {categoryToDelete.name}
+                </span>
+              </DialogTitle>
+
+              <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300 space-y-2 mt-1">
+                <span className="block">
+                  Are you sure you want to delete this category?
+                </span>
+
                 {deleteSubCategories.length > 0 && (
-                  <span className="mt-2">
-                    This will also delete {deleteSubCategories.length}{" "}
-                    sub-categor
-                    {deleteSubCategories.length !== 1 ? "ies" : "y"}: [
-                    {deleteSubCategories.map((c) => c.name).join(", ")}].
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed break-words">
+                    This will also delete{" "}
+                    <strong>{deleteSubCategories.length}</strong> sub-categor
+                    {deleteSubCategories.length !== 1 ? "ies" : "y"}:{" "}
+                    <span className="w-full flex flex-col items-start max-sm:items-center max-sm:justify-center">
+                      {deleteSubCategories.map((c, index) => (
+                        <span
+                          key={c._id}
+                          className="italic truncate block text-center max-w-40 md:max-w-60"
+                        >
+                          {c.name}{" "}
+                          {index !== deleteSubCategories.length - 1 && ","}
+                        </span>
+                      ))}
+                    </span>
+                    .
                   </span>
                 )}
+
                 {deleteCategoryTasks.length > 0 && (
-                  <span className="mt-2">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
                     This category and its sub-categories contain{" "}
-                    {deleteCategoryTasks.length} task
+                    <strong>{deleteCategoryTasks.length}</strong> task
                     {deleteCategoryTasks.length !== 1 ? "s" : ""}. Choose an
-                    action for these tasks:
+                    action:
                   </span>
                 )}
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
-              {deleteCategoryTasks.length > 0 && (
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+              {deleteCategoryTasks.length > 0 ? (
                 <>
                   <Button
                     variant="destructive"
@@ -334,6 +363,7 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                   >
                     Delete Tasks
                   </Button>
+
                   <Button
                     variant="outline"
                     onClick={() =>
@@ -342,11 +372,10 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                     disabled={isHandling}
                     className="w-full sm:w-auto"
                   >
-                    Keep Tasks (Unassign Category)
+                    Keep Tasks (Unassign)
                   </Button>
                 </>
-              )}
-              {deleteCategoryTasks.length === 0 && (
+              ) : (
                 <Button
                   variant="destructive"
                   onClick={() =>
@@ -358,6 +387,7 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                   Delete Category
                 </Button>
               )}
+
               <Button
                 variant="outline"
                 onClick={() => setIsDeleteDialogOpen(false)}
