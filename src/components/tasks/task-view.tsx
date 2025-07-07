@@ -1,7 +1,7 @@
 "use client";
 
 import { useTaskStore } from "@/lib/store";
-import CategoriesTabs from "./categories-tabs";
+import CategoriesTabs from "../categories-tabs";
 
 export function TaskView() {
   const { tasks } = useTaskStore();

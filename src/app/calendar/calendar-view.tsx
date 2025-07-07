@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 export function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const { tasks } = useTaskStore();
 
   const monthStart = startOfMonth(currentDate);

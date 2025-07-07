@@ -20,6 +20,7 @@ interface TaskStore {
   setCategories: (newCategories: TCategory[]) => void;
   addCategory: (category: TCategory) => void;
   updateTasksCategory: (taskIds: string[], categoryId: string | null) => void;
+  removeTasksCategory: (taskIds: string[]) => void; // New action
   clearError: () => void;
 }
 
@@ -34,9 +35,8 @@ export const useTaskStore = create<TaskStore>()(
       setIsHandling: (state) => set({ isHandling: state }),
       error: null,
 
-      setTasks: async (newTasks) => set({ tasks: newTasks }),
-      addTask: async (task) =>
-        set((state) => ({ tasks: [task, ...state.tasks] })),
+      setTasks: (newTasks) => set({ tasks: newTasks }),
+      addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
 
       editTask: async (id, data) =>
         set((state) => ({
@@ -50,9 +50,8 @@ export const useTaskStore = create<TaskStore>()(
           tasks: state.tasks.filter((task) => task._id !== id),
         })),
 
-      setCategories: async (newCategories) =>
-        set({ categories: newCategories }),
-      addCategory: async (category) =>
+      setCategories: (newCategories) => set({ categories: newCategories }),
+      addCategory: (category) =>
         set((state) => ({ categories: [...state.categories, category] })),
 
       updateTasksCategory: (taskIds, categoryId) =>
@@ -60,6 +59,16 @@ export const useTaskStore = create<TaskStore>()(
           tasks: state.tasks.map((task) =>
             taskIds.includes(task._id)
               ? { ...task, categoryId: categoryId || undefined }
+              : task
+          ),
+        })),
+
+      // New action to explicitly remove tasks from categories
+      removeTasksCategory: (taskIds) =>
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            taskIds.includes(task._id)
+              ? { ...task, categoryId: undefined }
               : task
           ),
         })),

@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TaskDashboard } from "@/components/task-dashboard";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
-import { TaskView } from "@/components/task-view";
+import { TaskView } from "@/components/tasks/task-view";
 
 export default function Home() {
   const { data: session, status } = useSession();

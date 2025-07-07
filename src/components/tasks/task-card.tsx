@@ -1,19 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import {
-  Calendar,
-  Clock,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-import { format, isPast, isToday } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
+  deleteTask,
+  updateSubTaskStatus,
+  updateTaskStatus,
+} from "@/actions/tasks";
+import { EditTaskModal } from "@/components/tasks/edit-task-modal";
+import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -22,16 +18,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTaskStore } from "@/lib/store";
-import { AddTaskModal } from "@/components/add-task-modal";
-import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { TTask } from "@/types/task";
+import { format, isPast, isToday } from "date-fns";
 import {
-  deleteTask,
-  updateTaskStatus,
-  updateSubTaskStatus,
-} from "@/actions/tasks";
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Edit,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface TaskCardProps {
   task: TTask & { categoryName?: string; categoryColor?: string }; // Extend TTask with optional category fields
@@ -314,7 +314,7 @@ export function TaskCard({ task }: TaskCardProps) {
         </CardContent>
       </Card>
 
-      <AddTaskModal
+      <EditTaskModal
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         task={task}

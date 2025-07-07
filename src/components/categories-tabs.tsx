@@ -1,6 +1,6 @@
 "use client";
 
-import { TaskCard } from "@/components/task-card";
+import { TaskCard } from "@/components/tasks/task-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTaskStore } from "@/lib/store";
 import { TTask } from "@/types/task";

@@ -12,25 +12,16 @@ import {
 } from "@/components/ui/dialog";
 import { useTaskStore } from "@/lib/store";
 import { TCategory } from "@/types/category";
-import { CategoryFormData } from "@/validation/Category";
 import { ChevronDown, ChevronUp, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import EditCategoryModel from "./edit-category-model";
 
 interface CategoryCardProps {
-  category: TCategory & { taskCount?: number };
-  setEditingCategory: (category: TCategory) => void;
-  setIsCategoryModalOpen: (open: boolean) => void;
-  form: ReturnType<typeof useForm<CategoryFormData>>;
+  category: TCategory;
 }
 
-const CategoryCard = ({
-  category,
-  setEditingCategory,
-  setIsCategoryModalOpen,
-  form,
-}: CategoryCardProps) => {
+const CategoryCard = ({ category }: CategoryCardProps) => {
   const { categories, setCategories, tasks, setTasks } = useTaskStore();
   const [isHandling, setIsHandling] = useState(false);
   const [isSubCategoriesOpen, setIsSubCategoriesOpen] = useState(false);
@@ -39,17 +30,13 @@ const CategoryCard = ({
   const [categoryToDelete, setCategoryToDelete] = useState<TCategory | null>(
     null
   );
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<TCategory | null>(
+    null
+  );
 
   const handleEditCategory = (category: TCategory) => {
     setEditingCategory(category);
-    form.reset({
-      name: category.name,
-      parentId: category.parentId,
-      color: category.color || "#000000",
-      taskIds: tasks
-        .filter((task) => task.categoryId === category._id)
-        .map((task) => task._id),
-    });
     setIsCategoryModalOpen(true);
   };
 
@@ -66,7 +53,6 @@ const CategoryCard = ({
       setIsHandling(true);
       const res = await deleteTaskCategory(categoryId, deleteTasks);
       if (res?.success) {
-        // Get all descendant category IDs
         const getDescendantIds = (parentId: string): string[] => {
           const children = categories.filter((c) => c.parentId === parentId);
           return [
@@ -297,6 +283,16 @@ const CategoryCard = ({
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+
+      <EditCategoryModel
+        isCategoryModalOpen={isCategoryModalOpen}
+        editingCategory={editingCategory}
+        setIsCategoryModalOpen={setIsCategoryModalOpen}
+        setEditingCategory={setEditingCategory}
+        taskIds={filteredTasks.map((task) => task._id)}
+      />
 
       {/* Delete Confirmation Dialog */}
       {categoryToDelete && (

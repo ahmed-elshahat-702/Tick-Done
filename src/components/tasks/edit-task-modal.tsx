@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createTask, UpdateTask } from "@/actions/tasks";
+import { UpdateTask } from "@/actions/tasks";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,18 +43,20 @@ import { CalendarIcon, Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
-import { Badge } from "./ui/badge";
+import { Badge } from "../ui/badge";
 
-interface AddTaskModalProps {
+interface EditTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: TTask;
+  task: TTask;
 }
 
-export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
-  const { addTask, editTask, isHandling, setIsHandling, categories } =
-    useTaskStore();
-  const isEditing = !!task;
+export function EditTaskModal({
+  open,
+  onOpenChange,
+  task,
+}: EditTaskModalProps) {
+  const { editTask, isHandling, setIsHandling, categories } = useTaskStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
 
@@ -133,61 +135,34 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
   const onSubmit = async (data: TaskFormData) => {
     try {
       const taskData = { ...data, subTasks: data.subTasks || [] };
-      if (isEditing && task) {
-        try {
-          setIsHandling(true);
-          const res = await UpdateTask(task._id, taskData);
-          if (res?.error) {
-            toast(res.error);
-          }
-          if (res?.success && res?.task) {
-            await editTask(task._id, res.task);
-            toast(res.success);
-            form.reset({
-              title: res?.task?.title || "",
-              description: res?.task?.description || "",
-              priority: res?.task?.priority || "medium",
-              dueDate: res?.task?.dueDate
-                ? new Date(res?.task.dueDate)
-                : undefined,
-              tag: res?.task?.tag || "",
-              subTasks: res?.task?.subTasks || [],
-              categoryId: res?.task?.categoryId ?? null,
-            });
-          }
-        } catch (error) {
-          console.error("Failed to update task:", error);
-          toast("Failed to update task");
-        } finally {
-          setIsHandling(false);
+      try {
+        setIsHandling(true);
+        const res = await UpdateTask(task._id, taskData);
+        if (res?.error) {
+          toast(res.error);
         }
-      } else {
-        try {
-          setIsHandling(true);
-          const res = await createTask(taskData);
-          if (res?.error) {
-            toast(res.error);
-          }
-          if (res?.success && res?.task) {
-            addTask(res.task);
-            toast(res.success);
-          }
-        } catch (error) {
-          console.error("Failed to add task:", error);
-          toast("Failed to add task");
-        } finally {
-          setIsHandling(false);
+        if (res?.success && res?.task) {
+          await editTask(task._id, res.task);
+          toast(res.success);
+          form.reset({
+            title: res?.task?.title || "",
+            description: res?.task?.description || "",
+            priority: res?.task?.priority || "medium",
+            dueDate: res?.task?.dueDate
+              ? new Date(res?.task.dueDate)
+              : undefined,
+            tag: res?.task?.tag || "",
+            subTasks: res?.task?.subTasks || [],
+            categoryId: res?.task?.categoryId ?? null,
+          });
         }
+      } catch (error) {
+        console.error("Failed to update task:", error);
+        toast("Failed to update task");
+      } finally {
+        setIsHandling(false);
       }
-      form.reset({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: undefined,
-        tag: "",
-        subTasks: [],
-        categoryId: null,
-      });
+      form.reset();
       setSubTasks([]);
       setNewSubTaskTitle("");
       onOpenChange(false);
@@ -218,7 +193,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Task" : "Add New Task"}</DialogTitle>
+          <DialogTitle>Edit Task</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -449,12 +424,10 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                 {isHandling ? (
                   <>
                     <LoadingSpinner className="mr-2 h-4 w-4" />
-                    {isEditing ? "Updating..." : "Adding..."}
+                    Updating...
                   </>
-                ) : isEditing ? (
-                  "Update Task"
                 ) : (
-                  "Add Task"
+                  "Update Task"
                 )}
               </Button>
             </div>
