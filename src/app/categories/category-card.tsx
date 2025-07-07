@@ -14,7 +14,6 @@ import { useTaskStore } from "@/lib/store";
 import { TCategory } from "@/types/category";
 import { CategoryFormData } from "@/validation/Category";
 import { ChevronDown, ChevronUp, Edit, Trash2 } from "lucide-react";
-import { ObjectId } from "mongoose";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -41,12 +40,15 @@ const CategoryCard = ({
     null
   );
 
-  const handleEditCategory = (cat: TCategory) => {
-    setEditingCategory(cat);
+  const handleEditCategory = (category: TCategory) => {
+    setEditingCategory(category);
     form.reset({
-      name: cat.name,
-      parentId: cat.parentId ?? null,
-      color: cat.color || "#000000",
+      name: category.name,
+      parentId: category.parentId,
+      color: category.color || "#000000",
+      taskIds: tasks
+        .filter((task) => task.categoryId === category._id)
+        .map((task) => task._id),
     });
     setIsCategoryModalOpen(true);
   };
@@ -57,7 +59,7 @@ const CategoryCard = ({
   };
 
   const handleDeleteCategory = async (
-    categoryId: ObjectId,
+    categoryId: string,
     deleteTasks: boolean
   ) => {
     try {
@@ -66,33 +68,21 @@ const CategoryCard = ({
       if (res?.success) {
         // Get all descendant category IDs
         const getDescendantIds = (parentId: string): string[] => {
-          const children = categories.filter(
-            (c) => c.parentId?.toString() === parentId
-          );
+          const children = categories.filter((c) => c.parentId === parentId);
           return [
             parentId,
-            ...children.flatMap((child) =>
-              getDescendantIds(child._id.toString())
-            ),
+            ...children.flatMap((child) => getDescendantIds(child._id)),
           ];
         };
-        const idsToRemove = getDescendantIds(categoryId.toString());
+        const idsToRemove = getDescendantIds(categoryId);
         // Update state to remove the category and all its descendants
-        setCategories(
-          categories.filter((c) => !idsToRemove.includes(c._id.toString()))
-        );
+        setCategories(categories.filter((c) => !idsToRemove.includes(c._id)));
         // Remove associated tasks if deleteTasks is true
         if (deleteTasks) {
           const taskIdsToRemove = tasks
-            .filter((task) =>
-              idsToRemove.includes(task.categoryId?.toString() || "")
-            )
-            .map((task) => task._id?.toString());
-          setTasks(
-            tasks.filter(
-              (task) => !taskIdsToRemove.includes(task._id?.toString())
-            )
-          );
+            .filter((task) => idsToRemove.includes(task.categoryId || ""))
+            .map((task) => task._id);
+          setTasks(tasks.filter((task) => !taskIdsToRemove.includes(task._id)));
         }
         toast.success(res.success);
       } else {
@@ -109,41 +99,32 @@ const CategoryCard = ({
   };
 
   const parentName = category.parentId
-    ? categories.find((c) => c._id?.toString() === category.parentId)?.name ||
-      "Unknown"
+    ? categories.find((c) => c._id === category.parentId)?.name || "Unknown"
     : null;
 
   // Find sub-categories where parentId matches the current category's _id
-  const subCategories = categories.filter(
-    (c) => c.parentId?.toString() === category._id?.toString()
-  );
+  const subCategories = categories.filter((c) => c.parentId === category._id);
 
   // Filter tasks for the current category and its sub-categories
   const filteredTasks = tasks.filter(
     (task) =>
-      task.categoryId?.toString() === category._id?.toString() ||
-      subCategories.some(
-        (subCategory) =>
-          task.categoryId?.toString() === subCategory._id?.toString()
-      )
+      task.categoryId === category._id ||
+      subCategories.some((subCategory) => task.categoryId === subCategory._id)
   );
 
   // Get tasks and sub-categories for the category being deleted
   const deleteCategoryTasks = categoryToDelete
     ? tasks.filter(
         (task) =>
-          task.categoryId?.toString() === categoryToDelete._id?.toString() ||
+          task.categoryId === categoryToDelete._id ||
           categories.some(
             (c) =>
-              c.parentId?.toString() === categoryToDelete._id?.toString() &&
-              task.categoryId?.toString() === c._id?.toString()
+              c.parentId === categoryToDelete._id && task.categoryId === c._id
           )
       )
     : [];
   const deleteSubCategories = categoryToDelete
-    ? categories.filter(
-        (c) => c.parentId?.toString() === categoryToDelete._id?.toString()
-      )
+    ? categories.filter((c) => c.parentId === categoryToDelete._id)
     : [];
   return (
     <div className="relative bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow duration-300 w-full">
@@ -225,7 +206,7 @@ const CategoryCard = ({
             >
               {subCategories.map((subCategory) => (
                 <li
-                  key={subCategory._id?.toString()}
+                  key={subCategory._id}
                   className="flex items-center justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700/50 rounded-md p-2"
                 >
                   <div className="flex items-center gap-3">
@@ -241,9 +222,7 @@ const CategoryCard = ({
                       (
                       {
                         tasks.filter(
-                          (task) =>
-                            task.categoryId?.toString() ===
-                            subCategory._id?.toString()
+                          (task) => task.categoryId === subCategory._id
                         ).length
                       }{" "}
                       tasks)
@@ -299,7 +278,7 @@ const CategoryCard = ({
             >
               {filteredTasks.map((task) => (
                 <li
-                  key={task._id?.toString()}
+                  key={task._id}
                   className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700/50 rounded-md p-2"
                 >
                   <span className="font-medium truncate">{task.title}</span>

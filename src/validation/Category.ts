@@ -7,6 +7,7 @@ export const categorySchema = z.object({
     .string()
     .regex(/^#[0-9A-F]{6}$/i, "Invalid color format")
     .optional(),
+  taskIds: z.array(z.string()).optional(),
 });
 
 export type CategoryFormData = z.infer<typeof categorySchema>;

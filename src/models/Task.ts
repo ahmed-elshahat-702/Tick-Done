@@ -1,5 +1,5 @@
-import { model, models, Schema } from "mongoose";
 import { TTask } from "@/types/task";
+import { model, models, Schema } from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 
 const SubTaskSchema: Schema = new Schema({
@@ -12,7 +12,7 @@ const SubTaskSchema: Schema = new Schema({
   },
 });
 
-const TaskSchema: Schema = new Schema<TTask>(
+const TaskSchema: Schema = new Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: false },

@@ -1,12 +1,10 @@
-import { ObjectId } from "mongodb";
-
 export interface TUser {
-  _id: ObjectId;
+  _id: string;
   name: string;
   email: string;
   bio?: string;
   image?: string;
-  hashedPassword?: string; // Made optional for OAuth users
+  hashedPassword?: string;
   authProvider?: string;
   createdAt: Date;
 }

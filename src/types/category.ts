@@ -1,9 +1,7 @@
-import { ObjectId } from "mongoose";
-
 export interface TCategory {
-  _id: ObjectId;
+  _id: string;
   name: string;
   userId: string;
-  parentId?: string | null;
+  parentId?: string;
   color?: string;
 }

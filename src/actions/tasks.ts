@@ -9,7 +9,6 @@ import { TaskFormData } from "@/validation/Task";
 import { revalidatePath } from "next/cache";
 import { toPlainObject } from "../lib/utils";
 import { SubTask, TTask } from "@/types/task";
-import { ObjectId } from "mongoose";
 
 const trimTitle = (title: string) =>
   title
@@ -85,7 +84,7 @@ export async function createTask(taskData: TaskFormData) {
   }
 }
 
-export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
+export async function UpdateTask(taskId: string, taskData: TaskFormData) {
   try {
     const session = await auth();
 
@@ -165,7 +164,7 @@ export async function UpdateTask(taskId: ObjectId, taskData: TaskFormData) {
 }
 
 export async function updateTaskStatus(
-  taskId: ObjectId,
+  taskId: string,
   status: TTask["status"]
 ) {
   try {
@@ -203,7 +202,7 @@ export async function updateTaskStatus(
 }
 
 export async function updateSubTaskStatus(
-  taskId: ObjectId,
+  taskId: string,
   subTaskId: string,
   status: "todo" | "done"
 ) {
@@ -227,7 +226,7 @@ export async function updateSubTaskStatus(
     // Update sub-task status
     const subTasks = task.subTasks || [];
     const subTaskIndex = subTasks.findIndex(
-      (subTask: SubTask) => subTask._id.toString() === subTaskId
+      (subTask: SubTask) => subTask._id === subTaskId
     );
     if (subTaskIndex === -1) {
       return { error: "Sub-task not found!" };
@@ -250,7 +249,7 @@ export async function updateSubTaskStatus(
   }
 }
 
-export async function deleteTask(taskId: ObjectId) {
+export async function deleteTask(taskId: string) {
   try {
     const session = await auth();
 

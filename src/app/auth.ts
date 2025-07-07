@@ -72,9 +72,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         avatar_url?: string;
       }) {
         const user: AppUser = {
-          id: profile.id.toString(), // Convert to string for consistency
-          name: profile.name || profile.login, // Fallback to login if name is null
-          email: profile.email || "", // GitHub may not always provide email
+          id: profile.id?.toString(),
+          name: profile.name || profile.login,
+          email: profile.email || "",
           image: profile.avatar_url || "",
           bio: "",
         };
@@ -116,7 +116,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const appUser: AppUser = {
-          id: user._id.toString(),
+          id: user._id,
           name: user.name,
           email: user.email,
           bio: user.bio || "",
@@ -201,7 +201,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         await connectDB();
         const dbUser = await User.findOne({ email: appToken.email });
         if (dbUser) {
-          appToken.id = dbUser._id.toString();
+          appToken.id = dbUser._id;
           appToken.name = dbUser.name;
           appToken.image = dbUser.image;
           appToken.bio = dbUser.bio || "";

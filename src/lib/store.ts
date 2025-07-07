@@ -2,7 +2,6 @@
 
 import { TTask } from "@/types/task";
 import { TCategory } from "@/types/category";
-import { ObjectId } from "mongoose";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -16,10 +15,11 @@ interface TaskStore {
   error: string | null;
   setTasks: (newTasks: TTask[]) => void;
   addTask: (task: TTask) => void;
-  editTask: (id: ObjectId, data: Partial<TTask>) => Promise<void>;
-  removeTask: (id: ObjectId) => Promise<void>;
+  editTask: (id: string, data: Partial<TTask>) => Promise<void>;
+  removeTask: (id: string) => Promise<void>;
   setCategories: (newCategories: TCategory[]) => void;
   addCategory: (category: TCategory) => void;
+  updateTasksCategory: (taskIds: string[], categoryId: string | null) => void;
   clearError: () => void;
 }
 
@@ -30,41 +30,39 @@ export const useTaskStore = create<TaskStore>()(
       categories: [],
       isLoading: false,
       isHandling: false,
-      setIsLoading: (state) => {
-        set({ isLoading: state });
-      },
-      setIsHandling: (state) => {
-        set({ isHandling: state });
-      },
+      setIsLoading: (state) => set({ isLoading: state }),
+      setIsHandling: (state) => set({ isHandling: state }),
       error: null,
 
-      setTasks: async (newTasks) => {
-        set({ tasks: newTasks });
-      },
-      addTask: async (task) => {
-        set((state) => ({ tasks: [task, ...state.tasks] }));
-      },
+      setTasks: async (newTasks) => set({ tasks: newTasks }),
+      addTask: async (task) =>
+        set((state) => ({ tasks: [task, ...state.tasks] })),
 
-      editTask: async (id, data) => {
+      editTask: async (id, data) =>
         set((state) => ({
           tasks: state.tasks.map((task) =>
             task._id === id ? { ...task, ...data, updatedAt: new Date() } : task
           ),
-        }));
-      },
+        })),
 
-      removeTask: async (id) => {
+      removeTask: async (id) =>
         set((state) => ({
           tasks: state.tasks.filter((task) => task._id !== id),
-        }));
-      },
+        })),
 
-      setCategories: async (newCategories) => {
-        set({ categories: newCategories });
-      },
-      addCategory: async (category) => {
-        set((state) => ({ categories: [...state.categories, category] }));
-      },
+      setCategories: async (newCategories) =>
+        set({ categories: newCategories }),
+      addCategory: async (category) =>
+        set((state) => ({ categories: [...state.categories, category] })),
+
+      updateTasksCategory: (taskIds, categoryId) =>
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            taskIds.includes(task._id)
+              ? { ...task, categoryId: categoryId || undefined }
+              : task
+          ),
+        })),
 
       clearError: () => set({ error: null }),
     }),

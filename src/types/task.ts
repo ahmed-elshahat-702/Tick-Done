@@ -1,13 +1,5 @@
-import { ObjectId } from "mongoose";
-
-export interface SubTask {
-  _id: string;
-  title: string;
-  status: "todo" | "done";
-}
-
 export interface TTask {
-  _id: ObjectId;
+  _id: string;
   title: string;
   description?: string;
   status: "todo" | "in-progress" | "done";
@@ -16,7 +8,13 @@ export interface TTask {
   tag?: string;
   createdAt: Date;
   updatedAt: Date;
-  userId: ObjectId;
-  categoryId?: ObjectId;
+  userId: string;
+  categoryId?: string;
   subTasks?: SubTask[];
+}
+
+export interface SubTask {
+  _id: string;
+  title: string;
+  status: "todo" | "done";
 }

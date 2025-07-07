@@ -27,7 +27,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
 
   // Get sub-categories for a given category ID
   const getSubCategories = (parentId: string) =>
-    categories.filter((c) => c.parentId?.toString() === parentId);
+    categories.filter((c) => c.parentId === parentId);
 
   // Filter tasks based on the active tab and sub-tab
   const filteredTasks = mappedTasks.filter((task) => {
@@ -40,23 +40,23 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
     const activeCategoryId = activeTab.replace("category-", "");
     if (subTab && subTab.startsWith("subcategory-")) {
       const subCategoryId = subTab.replace("subcategory-", "");
-      return task.categoryId?.toString() === subCategoryId;
+      return task.categoryId === subCategoryId;
     }
     if (subTab === "only" && activeTab === `category-${activeCategoryId}`) {
-      return task.categoryId?.toString() === activeCategoryId;
+      return task.categoryId === activeCategoryId;
     }
     // For parent category, show all tasks if showAllParentTasks is true, otherwise only direct tasks
     if (activeTab === `category-${activeCategoryId}`) {
       if (showAllParentTasks) {
-        const subCategoryIds = getSubCategories(activeCategoryId).map((c) =>
-          c._id.toString()
+        const subCategoryIds = getSubCategories(activeCategoryId).map(
+          (c) => c._id
         );
         return (
-          task.categoryId?.toString() === activeCategoryId ||
-          subCategoryIds.includes(task.categoryId?.toString() || "")
+          task.categoryId === activeCategoryId ||
+          subCategoryIds.includes(task.categoryId || "")
         );
       }
-      return task.categoryId?.toString() === activeCategoryId;
+      return task.categoryId === activeCategoryId;
     }
     return false;
   });
@@ -98,10 +98,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
             Uncategorized
           </TabsTrigger>
           {topLevelCategories.map((category) => (
-            <TabsTrigger
-              key={category._id?.toString()}
-              value={`category-${category._id}`}
-            >
+            <TabsTrigger key={category._id} value={`category-${category._id}`}>
               {category.name}
             </TabsTrigger>
           ))}
@@ -111,7 +108,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
       <TabsContent value="all">
         <div className="grid gap-4 mt-6">
           {filteredTasks.map((task) => (
-            <TaskCard key={task._id?.toString()} task={task} />
+            <TaskCard key={task._id} task={task} />
           ))}
           {filteredTasks.length === 0 && (
             <div className="text-center py-12">
@@ -127,7 +124,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
       <TabsContent value="category-uncategorized">
         <div className="grid gap-4 mt-6">
           {filteredTasks.map((task) => (
-            <TaskCard key={task._id?.toString()} task={task} />
+            <TaskCard key={task._id} task={task} />
           ))}
           {filteredTasks.length === 0 && (
             <div className="text-center py-12">
@@ -141,12 +138,9 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
       </TabsContent>
 
       {topLevelCategories.map((category) => {
-        const subCategories = getSubCategories(category._id.toString());
+        const subCategories = getSubCategories(category._id);
         return (
-          <TabsContent
-            key={category._id?.toString()}
-            value={`category-${category._id}`}
-          >
+          <TabsContent key={category._id} value={`category-${category._id}`}>
             <div className="space-y-4">
               {subCategories.length > 0 && (
                 <Tabs
@@ -165,7 +159,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
                       </TabsTrigger>
                       {subCategories.map((subCategory) => (
                         <TabsTrigger
-                          key={subCategory._id?.toString()}
+                          key={subCategory._id}
                           value={`subcategory-${subCategory._id}`}
                         >
                           {subCategory.name}
@@ -177,7 +171,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
                   <TabsContent value={`category-${category._id}`}>
                     <div className="grid gap-4 mt-6">
                       {filteredTasks.map((task) => (
-                        <TaskCard key={task._id?.toString()} task={task} />
+                        <TaskCard key={task._id} task={task} />
                       ))}
                       {filteredTasks.length === 0 && (
                         <div className="text-center py-12">
@@ -195,7 +189,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
                   <TabsContent value="only">
                     <div className="grid gap-4 mt-6">
                       {filteredTasks.map((task) => (
-                        <TaskCard key={task._id?.toString()} task={task} />
+                        <TaskCard key={task._id} task={task} />
                       ))}
                       {filteredTasks.length === 0 && (
                         <div className="text-center py-12">
@@ -212,12 +206,12 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
 
                   {subCategories.map((subCategory) => (
                     <TabsContent
-                      key={subCategory._id?.toString()}
+                      key={subCategory._id}
                       value={`subcategory-${subCategory._id}`}
                     >
                       <div className="grid gap-4 mt-6">
                         {filteredTasks.map((task) => (
-                          <TaskCard key={task._id?.toString()} task={task} />
+                          <TaskCard key={task._id} task={task} />
                         ))}
                         {filteredTasks.length === 0 && (
                           <div className="text-center py-12">
@@ -237,7 +231,7 @@ const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
               {subCategories.length === 0 && (
                 <div className="grid gap-4 mt-6">
                   {filteredTasks.map((task) => (
-                    <TaskCard key={task._id?.toString()} task={task} />
+                    <TaskCard key={task._id} task={task} />
                   ))}
                   {filteredTasks.length === 0 && (
                     <div className="text-center py-12">

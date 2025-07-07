@@ -67,7 +67,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
       tag: task?.tag || "",
       subTasks: task?.subTasks || [],
-      categoryId: task?.categoryId?.toString() ?? null,
+      categoryId: task?.categoryId ?? null,
     },
   });
 
@@ -81,7 +81,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
         dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
         tag: task.tag || "",
         subTasks: task.subTasks || [],
-        categoryId: task.categoryId?.toString() ?? null,
+        categoryId: task.categoryId ?? null,
       });
       setSubTasks(task.subTasks || []);
     } else {
@@ -152,7 +152,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                 : undefined,
               tag: res?.task?.tag || "",
               subTasks: res?.task?.subTasks || [],
-              categoryId: res?.task?.categoryId?.toString() ?? null,
+              categoryId: res?.task?.categoryId ?? null,
             });
           }
         } catch (error) {
@@ -401,10 +401,7 @@ export function AddTaskModal({ open, onOpenChange, task }: AddTaskModalProps) {
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
                         {categories.map((category) => (
-                          <SelectItem
-                            key={category._id?.toString()}
-                            value={category._id?.toString()}
-                          >
+                          <SelectItem key={category._id} value={category._id}>
                             {category.name}
                           </SelectItem>
                         ))}

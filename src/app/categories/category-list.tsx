@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import {
   Dialog,
@@ -30,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-
+import { MultiSelect } from "@/components/ui/multi-select"; // Import the MultiSelect component
 import { useTaskStore } from "@/lib/store";
 import {
   createTaskCategory,
@@ -39,11 +38,10 @@ import {
 } from "@/actions/task-categories";
 import { TCategory } from "@/types/category";
 import { CategoryFormData, categorySchema } from "@/validation/Category";
-
-import CategoryCard from "@/components/category-card";
+import CategoryCard from "@/app/categories/category-card";
 
 const CategoryList = () => {
-  const { categories, setCategories, addCategory } = useTaskStore();
+  const { categories, tasks, setCategories, addCategory } = useTaskStore();
   const [isHandling, setIsHandling] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<TCategory | null>(
@@ -56,6 +54,7 @@ const CategoryList = () => {
       name: "",
       parentId: null,
       color: "#000000",
+      taskIds: [],
     },
   });
 
@@ -83,6 +82,11 @@ const CategoryList = () => {
               c._id === editingCategory._id ? res.category : c
             )
           );
+          if (data.taskIds) {
+            useTaskStore
+              .getState()
+              .updateTasksCategory(data.taskIds, res.category._id);
+          }
           toast.success(res.success);
         } else {
           toast.error(res.error || "Update failed");
@@ -91,13 +95,18 @@ const CategoryList = () => {
         const res = await createTaskCategory(data);
         if (res?.success && res?.category) {
           addCategory(res.category);
+          if (data.taskIds) {
+            useTaskStore
+              .getState()
+              .updateTasksCategory(data.taskIds, res.category._id);
+          }
           toast.success(res.success);
         } else {
           toast.error(res.error || "Create failed");
         }
       }
 
-      form.reset({ name: "", parentId: null, color: "#000000" });
+      form.reset({ name: "", parentId: null, color: "#000000", taskIds: [] });
       setEditingCategory(null);
       setIsCategoryModalOpen(false);
     } catch (error) {
@@ -188,15 +197,46 @@ const CategoryList = () => {
                                 (!c.parentId || c.parentId === null)
                             )
                             .map((cat) => (
-                              <SelectItem
-                                key={cat._id?.toString()}
-                                value={cat._id?.toString()}
-                              >
+                              <SelectItem key={cat._id} value={cat._id}>
                                 {cat.name}
                               </SelectItem>
                             ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="taskIds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assign Tasks</FormLabel>
+                      <FormControl>
+                        <MultiSelect
+                          options={tasks.map((task) => ({
+                            value: task._id,
+                            label: task.title,
+                          }))}
+                          selected={
+                            field.value?.map((id) => ({
+                              value: id,
+                              label:
+                                tasks.find((task) => task._id === id)?.title ||
+                                id,
+                            })) || []
+                          }
+                          onChange={(selected) =>
+                            field.onChange(
+                              selected.map((option) => option.value)
+                            )
+                          }
+                          placeholder="Select tasks..."
+                          disabled={isHandling}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -234,6 +274,7 @@ const CategoryList = () => {
                         name: "",
                         parentId: null,
                         color: "#000000",
+                        taskIds: [],
                       });
                       setEditingCategory(null);
                       setIsCategoryModalOpen(false);
@@ -272,7 +313,7 @@ const CategoryList = () => {
               .filter((category) => !category.parentId)
               .map((category) => (
                 <CategoryCard
-                  key={category._id?.toString()}
+                  key={category._id}
                   category={category}
                   setEditingCategory={setEditingCategory}
                   setIsCategoryModalOpen={setIsCategoryModalOpen}
