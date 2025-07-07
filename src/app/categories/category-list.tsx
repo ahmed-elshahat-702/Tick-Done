@@ -216,10 +216,17 @@ const CategoryList = () => {
                       <FormLabel>Assign Tasks</FormLabel>
                       <FormControl>
                         <MultiSelect
-                          options={tasks.map((task) => ({
-                            value: task._id,
-                            label: task.title,
-                          }))}
+                          options={tasks
+                            .filter(
+                              (task) =>
+                                !task.categoryId || // Tasks with no category
+                                (editingCategory &&
+                                  task.categoryId === editingCategory._id) // Tasks assigned to the current editing category
+                            )
+                            .map((task) => ({
+                              value: task._id,
+                              label: task.title,
+                            }))}
                           selected={
                             field.value?.map((id) => ({
                               value: id,
