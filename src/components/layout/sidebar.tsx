@@ -12,17 +12,15 @@ import {
   ListTree,
   LogOut,
   Menu,
-  Moon,
-  Sun,
   User,
   X,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
-import { useState } from "react";
-import Logo from "./logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import Logo from "./logo";
+import ThemeToggler from "./theme-toggler";
 
 const navigation = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -36,7 +34,6 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
 
-  const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -83,77 +80,70 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border space-y-2">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 h-10"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? (
-            <Sun className="w-4 h-4" />
-          ) : (
-            <Moon className="w-4 h-4" />
-          )}
-          Toggle Theme
-        </Button>
+      <div>
+        <div className="p-4 border-t border-border">
+          <span className="text-muted-foreground text-sm px-2">Theme</span>
+          <ThemeToggler />
+        </div>
+        <div className="p-4 border-t border-border space-y-2">
+          <Link
+            href="/profile"
+            className={cn(
+              buttonVariants({
+                variant: "ghost",
+              }),
+              "w-full justify-start gap-3 h-10"
+            )}
+          >
+            <User className="w-4 h-4" />
+            Profile
+          </Link>
 
-        <Link
-          href="/profile"
-          className={cn(
-            buttonVariants({
-              variant: "ghost",
-            }),
-            "w-full justify-start gap-3 h-10"
-          )}
-        >
-          <User className="w-4 h-4" />
-          Profile
-        </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-10 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+          >
+            {isSigningOut ? (
+              <LoadingSpinner className="w-4 h-4" />
+            ) : (
+              <LogOut className="w-4 h-4" />
+            )}
+            {isSigningOut ? "Signing out..." : "Sign out"}
+          </Button>
 
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 h-10 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-        >
-          {isSigningOut ? (
-            <LoadingSpinner className="w-4 h-4" />
-          ) : (
-            <LogOut className="w-4 h-4" />
-          )}
-          {isSigningOut ? "Signing out..." : "Sign out"}
-        </Button>
-
-        {/* User Info */}
-        {status === "loading" ? (
-          <div className="flex items-center gap-3 p-2">
-            <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
-            <div className="flex-1 space-y-1">
-              <div className="h-3 bg-muted rounded animate-pulse" />
-              <div className="h-2 bg-muted rounded animate-pulse w-2/3" />
+          {/* User Info */}
+          {status === "loading" ? (
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+              <div className="flex-1 space-y-1">
+                <div className="h-3 bg-muted rounded animate-pulse" />
+                <div className="h-2 bg-muted rounded animate-pulse w-2/3" />
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 p-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage
-                src={session?.user?.image || ""}
-                className="w-full h-full object-cover"
-              />
-              <AvatarFallback>
-                {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
-                {session?.user?.name || "User"}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {session?.user?.email || "user@example.com"}
-              </p>
+          ) : (
+            <div className="flex items-center gap-3 p-2">
+              <Avatar className="w-8 h-8">
+                <AvatarImage
+                  src={session?.user?.image || ""}
+                  className="w-full h-full object-cover"
+                />
+                <AvatarFallback>
+                  {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {session?.user?.name || "User"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {session?.user?.email || "user@example.com"}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </>
   );
