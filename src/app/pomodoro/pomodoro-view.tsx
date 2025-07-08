@@ -42,11 +42,40 @@ const PomodoroView = () => {
 
   const sendNotification = useCallback(() => {
     if (notificationPermission === "granted" && "Notification" in window) {
-      new Notification("Pomodoro Timer", {
-        body: "Your Pomodoro session has ended!",
-        icon: "/logo.svg",
-      });
-      toast.success("Your Pomodoro session has ended!");
+      // Check if running as a PWA
+      const isPWA =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        ("standalone" in window.navigator && window.navigator.standalone);
+
+      if (isPWA && "serviceWorker" in navigator) {
+        // Use ServiceWorker for notifications in PWA
+        navigator.serviceWorker.ready
+          .then((registration) => {
+            registration.showNotification("Pomodoro Timer", {
+              body: "Your Pomodoro session has ended!",
+              icon: "/logo.svg",
+              badge: "/logo.svg",
+            });
+          })
+          .catch((error) => {
+            console.error("ServiceWorker notification error:", error);
+            toast.error("Failed to send notification.");
+          });
+      } else {
+        // Fallback to standard Notification for web
+        try {
+          new Notification("Pomodoro Timer", {
+            body: "Your Pomodoro session has ended!",
+            icon: "/logo.svg",
+          });
+          toast.success("Your Pomodoro session has ended!");
+        } catch (error) {
+          console.error("Notification error:", error);
+          toast.error(
+            `Notification not sent. Permission: ${notificationPermission}`
+          );
+        }
+      }
     } else {
       toast.error(
         `Notification not sent. Permission: ${notificationPermission}`
@@ -111,8 +140,8 @@ const PomodoroView = () => {
   };
 
   return (
-    <div className="min-h-screen flex md:items-center justify-center">
-      <Card className="w-full max-w-md border-none shadow-none">
+    <div className="flex md:items-center justify-center">
+      <Card className="w-full max-w-md border-none shadow-none bg-background">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
             Pomodoro Timer
@@ -130,7 +159,7 @@ const PomodoroView = () => {
                 fill="transparent"
               />
               <circle
-                className="stroke-current text-red-500"
+                className="stroke-current text-blue-500"
                 strokeWidth="8"
                 strokeLinecap="round"
                 cx="50"
@@ -160,7 +189,7 @@ const PomodoroView = () => {
           />
           <div className="flex gap-4">
             <Button
-              variant={isRunning ? "destructive" : "default"}
+              className="bg-blue-500 text-white"
               onClick={handleStartPause}
             >
               {isRunning ? "Pause" : totalSeconds === 0 ? "Restart" : "Start"}
