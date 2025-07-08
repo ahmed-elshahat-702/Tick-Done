@@ -14,7 +14,8 @@ const PomodoroView = () => {
   const [durationMinutes, setDurationMinutes] = useState(25);
   const [totalSeconds, setTotalSeconds] = useState(durationMinutes * 60);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const minutes = Math.floor(totalSeconds / 60);
@@ -23,14 +24,13 @@ const PomodoroView = () => {
   const progress =
     ((durationMinutes * 60 - totalSeconds) / (durationMinutes * 60)) * 100;
 
+  // ✅ Notifications setup
   useEffect(() => {
     if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
       if (Notification.permission === "default") {
         Notification.requestPermission()
-          .then((permission) => {
-            setNotificationPermission(permission);
-          })
+          .then(setNotificationPermission)
           .catch((error) => {
             console.error("Error requesting notification permission:", error);
           });
@@ -42,13 +42,11 @@ const PomodoroView = () => {
 
   const sendNotification = useCallback(() => {
     if (notificationPermission === "granted" && "Notification" in window) {
-      // Check if running as a PWA
       const isPWA =
         window.matchMedia("(display-mode: standalone)").matches ||
         ("standalone" in window.navigator && window.navigator.standalone);
 
       if (isPWA && "serviceWorker" in navigator) {
-        // Use ServiceWorker for notifications in PWA
         navigator.serviceWorker.ready
           .then((registration) => {
             registration.showNotification("Pomodoro Timer", {
@@ -62,7 +60,6 @@ const PomodoroView = () => {
             toast.error("Failed to send notification.");
           });
       } else {
-        // Fallback to standard Notification for web
         try {
           new Notification("Pomodoro Timer", {
             body: "Your Pomodoro session has ended!",
@@ -88,47 +85,58 @@ const PomodoroView = () => {
       audioRef.current.play().catch((error) => {
         console.error("Error playing alarm:", error.message);
       });
-    } else {
-      console.error("Audio element is not available");
     }
   }, []);
 
+  // ✅ Timer tick logic using Date.now()
   useEffect(() => {
-    if (isRunning) {
-      timerRef.current = setInterval(() => {
-        setTotalSeconds((prev) => {
-          if (prev <= 0) {
-            clearInterval(timerRef.current!);
-            setIsRunning(false);
-            playAlarm();
-            sendNotification();
-            return 0; // Stop at 0, don't reset
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    if (!isRunning) return;
 
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+    const tick = () => {
+      if (!startTimeRef.current) return;
+
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTimeRef.current) / 1000);
+      const remaining = durationMinutes * 60 - elapsed;
+
+      if (remaining <= 0) {
+        setIsRunning(false);
+        setTotalSeconds(0);
+        playAlarm();
+        sendNotification();
+        return;
+      } else {
+        setTotalSeconds(remaining);
+        timeoutRef.current = setTimeout(tick, 1000);
       }
     };
-  }, [isRunning, playAlarm, sendNotification, durationMinutes]); // Ensure consistent dependencies
+
+    timeoutRef.current = setTimeout(tick, 1000);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [isRunning, durationMinutes, playAlarm, sendNotification]);
 
   const handleStartPause = () => {
-    if (totalSeconds > 0 || !isRunning) {
-      setIsRunning((prev) => !prev);
+    if (!isRunning) {
       if (totalSeconds === 0) {
-        setTotalSeconds(durationMinutes * 60); // Restart with selected duration
+        setTotalSeconds(durationMinutes * 60);
       }
+      startTimeRef.current =
+        Date.now() - (durationMinutes * 60 - totalSeconds) * 1000;
+      setIsRunning(true);
+    } else {
+      setIsRunning(false);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
   };
 
   const handleReset = () => {
     setIsRunning(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    startTimeRef.current = null;
     setTotalSeconds(durationMinutes * 60);
-    if (timerRef.current) clearInterval(timerRef.current);
   };
 
   const handleSliderChange = (value: number[]) => {
@@ -136,7 +144,8 @@ const PomodoroView = () => {
     setDurationMinutes(minutes);
     setTotalSeconds(minutes * 60);
     setIsRunning(false);
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    startTimeRef.current = null;
   };
 
   return (
@@ -179,7 +188,7 @@ const PomodoroView = () => {
             </div>
           </div>
           <Slider
-            min={5}
+            min={1 / 6}
             max={60}
             value={[durationMinutes]}
             step={5}
