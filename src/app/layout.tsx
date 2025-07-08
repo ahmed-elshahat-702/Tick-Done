@@ -15,6 +15,7 @@ import { SessionProvider } from "next-auth/react";
 export const metadata: Metadata = {
   title: "Tick Done - Modern Task Manager",
   description: "A clean and modern task management dashboard",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -24,6 +25,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/logo.svg" />
+      </head>
       <body
         // ${geistSans.variable} ${geistMono.variable}
         className={` antialiased`}

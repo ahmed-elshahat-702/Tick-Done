@@ -6,6 +6,15 @@ import { Slider } from "@/components/ui/slider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+interface ExtendedNotificationOptions extends NotificationOptions {
+  actions?: {
+    action: string;
+    title: string;
+    icon?: string;
+  }[];
+  renotify?: boolean;
+}
+
 const PomodoroView = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<
@@ -20,11 +29,10 @@ const PomodoroView = () => {
 
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-
   const progress =
     ((durationMinutes * 60 - totalSeconds) / (durationMinutes * 60)) * 100;
 
-  // ✅ Notifications setup
+  // ✅ Setup notification permissions
   useEffect(() => {
     if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
@@ -35,48 +43,42 @@ const PomodoroView = () => {
             console.error("Error requesting notification permission:", error);
           });
       }
-    } else {
-      console.warn("Notifications not supported in this browser");
     }
   }, []);
 
+  // ✅ Send persistent notification with buttons
+  const showPersistentNotification = async (timeLeft: string) => {
+    if ("serviceWorker" in navigator && "Notification" in window) {
+      const reg = await navigator.serviceWorker.ready;
+
+      const options: ExtendedNotificationOptions = {
+        body: `Time left: ${timeLeft}`,
+        tag: "pomodoro-active",
+        requireInteraction: true,
+        icon: "/logo.svg",
+        renotify: true,
+        actions: [
+          { action: "pause", title: "⏸ Pause" },
+          { action: "cancel", title: "❌ Cancel" },
+        ],
+      };
+
+      reg.showNotification("⏱ Pomodoro Running", options);
+    }
+  };
+
   const sendNotification = useCallback(() => {
     if (notificationPermission === "granted" && "Notification" in window) {
-      const isPWA =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        ("standalone" in window.navigator && window.navigator.standalone);
-
-      if (isPWA && "serviceWorker" in navigator) {
-        navigator.serviceWorker.ready
-          .then((registration) => {
-            registration.showNotification("Pomodoro Timer", {
-              body: "Your Pomodoro session has ended!",
-              icon: "/logo.svg",
-              badge: "/logo.svg",
-            });
-          })
-          .catch((error) => {
-            console.error("ServiceWorker notification error:", error);
-            toast.error("Failed to send notification.");
-          });
-      } else {
-        try {
-          new Notification("Pomodoro Timer", {
-            body: "Your Pomodoro session has ended!",
-            icon: "/logo.svg",
-          });
-          toast.success("Your Pomodoro session has ended!");
-        } catch (error) {
-          console.error("Notification error:", error);
-          toast.error(
-            `Notification not sent. Permission: ${notificationPermission}`
-          );
-        }
+      try {
+        new Notification("Pomodoro Timer", {
+          body: "Your Pomodoro session has ended!",
+          icon: "/logo.svg",
+        });
+        toast.success("Your Pomodoro session has ended!");
+      } catch (error) {
+        console.error(error);
+        toast.error("Notification failed.");
       }
-    } else {
-      toast.error(
-        `Notification not sent. Permission: ${notificationPermission}`
-      );
     }
   }, [notificationPermission]);
 
@@ -88,7 +90,7 @@ const PomodoroView = () => {
     }
   }, []);
 
-  // ✅ Timer tick logic using Date.now()
+  // ✅ Core ticking logic using Date.now()
   useEffect(() => {
     if (!isRunning) return;
 
@@ -104,9 +106,16 @@ const PomodoroView = () => {
         setTotalSeconds(0);
         playAlarm();
         sendNotification();
-        return;
       } else {
         setTotalSeconds(remaining);
+
+        // 🔔 Show persistent notification every tick
+        const formattedTime = `${String(Math.floor(remaining / 60)).padStart(
+          2,
+          "0"
+        )}:${String(remaining % 60).padStart(2, "0")}`;
+        showPersistentNotification(formattedTime);
+
         timeoutRef.current = setTimeout(tick, 1000);
       }
     };
@@ -118,25 +127,40 @@ const PomodoroView = () => {
     };
   }, [isRunning, durationMinutes, playAlarm, sendNotification]);
 
+  const handleReset = useCallback(() => {
+    setIsRunning(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    startTimeRef.current = null;
+    setTotalSeconds(durationMinutes * 60);
+  }, [durationMinutes]);
+
+  // ✅ Listen for messages from Service Worker (Pause/Cancel)
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        const { type } = event.data || {};
+        if (type === "PAUSE_TIMER") setIsRunning(false);
+        if (type === "RESET_TIMER") handleReset();
+      });
+    }
+  }, [handleReset]);
+
   const handleStartPause = () => {
     if (!isRunning) {
+      const newTotalSeconds =
+        totalSeconds === 0 ? durationMinutes * 60 : totalSeconds;
+
       if (totalSeconds === 0) {
-        setTotalSeconds(durationMinutes * 60);
+        setTotalSeconds(newTotalSeconds);
       }
+
       startTimeRef.current =
-        Date.now() - (durationMinutes * 60 - totalSeconds) * 1000;
+        Date.now() - (durationMinutes * 60 - newTotalSeconds) * 1000;
       setIsRunning(true);
     } else {
       setIsRunning(false);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    startTimeRef.current = null;
-    setTotalSeconds(durationMinutes * 60);
   };
 
   const handleSliderChange = (value: number[]) => {
