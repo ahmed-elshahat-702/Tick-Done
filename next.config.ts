@@ -1,4 +1,16 @@
 import withPWA from "next-pwa";
+import type { NextConfig } from "next";
+
+const baseConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+  },
+};
 
 const withPWAWrapped = withPWA({
   dest: "public",
@@ -8,19 +20,5 @@ const withPWAWrapped = withPWA({
   swSrc: "public/sw.js",
 });
 
-const nextConfig: import("next").NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-      {
-        protocol: "http",
-        hostname: "**",
-      },
-    ],
-  },
-};
-
-export default withPWAWrapped(nextConfig);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default withPWAWrapped(baseConfig as any);
