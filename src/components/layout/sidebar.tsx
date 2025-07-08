@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   AlarmClock,
   Calendar,
+  CalendarDays,
   CheckCircle,
   Home,
   ListTree,
@@ -21,10 +22,11 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Logo from "./logo";
 import ThemeToggler from "./theme-toggler";
+import { ScrollArea } from "../ui/scroll-area";
 
 const navigation = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/today", label: "Today", icon: CheckCircle },
+  { href: "/today", label: "Today", icon: CalendarDays },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/completed", label: "Completed", icon: CheckCircle },
   { href: "/categories", label: "Categories", icon: ListTree },
@@ -50,49 +52,52 @@ export function Sidebar() {
   };
 
   const sidebarContent = (
-    <>
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 md:p-6 border-b border-border">
+      <div className="p-4 md:p-6 border-b border-border h-fit">
         <Logo />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.label.toLowerCase()}
-              href={item.href}
-              className={cn(
-                buttonVariants({
-                  variant: pathname === item.href ? "secondary" : "ghost",
-                }),
-                "w-full justify-start gap-3 h-10",
-                pathname === item.href && "bg-secondary"
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 pt-2 px-4 overflow-hidden">
+        <ScrollArea className="max-h-full overflow-auto">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.label.toLowerCase()}
+                href={item.href}
+                className={cn(
+                  buttonVariants({
+                    variant: pathname === item.href ? "secondary" : "ghost",
+                  }),
+                  "w-full justify-start gap-3 h-10 my-1",
+                  pathname === item.href && "bg-secondary"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </ScrollArea>
       </nav>
 
       {/* Footer */}
-      <div>
-        <div className="p-4 border-t border-border">
+      <div className="h-fit overflow-hidden">
+        <div className="py-2 px-4 border-t border-border">
           <span className="text-muted-foreground text-sm px-2">Theme</span>
           <ThemeToggler />
         </div>
-        <div className="p-4 border-t border-border space-y-2">
+        <div className="px-4 py-2 border-t border-border space-y-2">
           <Link
             href="/profile"
             className={cn(
               buttonVariants({
-                variant: "ghost",
+                variant: pathname === "/profile" ? "secondary" : "ghost",
               }),
-              "w-full justify-start gap-3 h-10"
+              "w-full justify-start gap-3 h-10 my-2",
+              pathname === "/profile" && "bg-secondary"
             )}
           >
             <User className="w-4 h-4" />
@@ -145,7 +150,7 @@ export function Sidebar() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
