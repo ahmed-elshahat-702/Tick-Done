@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  AlarmClock,
   Calendar,
   CheckCircle,
   Home,
@@ -29,6 +30,7 @@ const navigation = [
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/completed", label: "Completed", icon: CheckCircle },
   { href: "/categories", label: "Categories", icon: ListTree },
+  { href: "/pomodoro", label: "Pomodoro", icon: AlarmClock },
 ];
 
 export function Sidebar() {
