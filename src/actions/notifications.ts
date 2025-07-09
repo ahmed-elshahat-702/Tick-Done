@@ -22,7 +22,6 @@ export async function subscribeUser(serializedSubscription: any) {
   }
 
   try {
-    // Store the subscription in the user's document
     await User.updateOne(
       { email: session.user.email },
       { $set: { pushSubscription: serializedSubscription } }
@@ -46,7 +45,6 @@ export async function unsubscribeUser() {
   }
 
   try {
-    // Remove the subscription from the user's document
     await User.updateOne(
       { email: session.user.email },
       { $unset: { pushSubscription: "" } }
@@ -58,7 +56,7 @@ export async function unsubscribeUser() {
   }
 }
 
-export async function sendNotification(message: string) {
+export async function sendNotification(message: string, time: string) {
   const session = await auth();
   if (!session?.user || !session.user.id) {
     return { error: "Unauthorized" };
@@ -77,8 +75,8 @@ export async function sendNotification(message: string) {
     await webpush.sendNotification(
       user.pushSubscription,
       JSON.stringify({
-        title: "Pomodoro Notification",
-        body: message,
+        title: "Pomodoro Timer",
+        body: `${message} - Time remaining: ${time}`,
         icon: "/icon.png",
       })
     );
