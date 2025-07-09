@@ -5,12 +5,14 @@
     "couldn",
     "gstatic",
     "mmss",
+    "nosniff",
     "partialize",
     "Pomodoro",
     "uncategorized",
     "Uploadthing",
     "utapi",
     "uuidv",
-    "webfonts"
+    "webfonts",
+    "webpush"
   ]
 }
