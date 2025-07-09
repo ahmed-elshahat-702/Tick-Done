@@ -1,11 +1,12 @@
 import NotificationPage from "@/components/layout/push-notification-manager";
+import { TaskDashboard } from "@/components/task-dashboard";
 import React from "react";
 
 const page = () => {
   return (
-    <div>
+    <TaskDashboard>
       <NotificationPage />
-    </div>
+    </TaskDashboard>
   );
 };
 
