@@ -16,6 +16,10 @@ export interface TUser {
   hashedPassword?: string;
   authProvider?: string;
   pushSubscription?: PushSubscriptionJSON | null;
+  scheduledNotification?: {
+    endTime: number;
+    message: string;
+  };
   createdAt: Date;
 }
 

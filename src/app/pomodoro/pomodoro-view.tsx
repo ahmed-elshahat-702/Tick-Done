@@ -8,8 +8,10 @@ import {
   subscribeUser,
   unsubscribeUser,
   sendNotification,
+  scheduleEndNotification,
 } from "@/actions/notifications";
 import { Label } from "@/components/ui/label";
+import { useTaskStore } from "@/lib/store";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -24,10 +26,6 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export default function Pomodoro() {
   const [time, setTime] = useState(25 * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [workDuration, setWorkDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
-  const [isWorkSession, setIsWorkSession] = useState(true);
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(
     null
@@ -35,10 +33,20 @@ export default function Pomodoro() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isRunningRef = useRef(isRunning);
-  const [sessionDuration, setSessionDuration] = useState(workDuration * 60);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const notificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const {
+    startTime,
+    endTime,
+    duration,
+    isRunning,
+    isWorkSession,
+    workDuration,
+    breakDuration,
+    setTimer,
+    setDurations,
+    clearTimer,
+  } = useTaskStore();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -49,15 +57,12 @@ export default function Pomodoro() {
   };
 
   const sendNotificationCallback = useCallback(
-    async (message: string, time: string, onSuccess?: () => void) => {
+    async (message: string, time: string) => {
       if (!subscription) return;
       try {
         const result = await sendNotification(message, time);
         if (result.error) {
           setError(result.error);
-        } else if (onSuccess) {
-          setError(null);
-          onSuccess();
         }
       } catch (error) {
         setError("Notification error");
@@ -67,9 +72,41 @@ export default function Pomodoro() {
     [subscription]
   );
 
-  useEffect(() => {
-    isRunningRef.current = isRunning;
-  }, [isRunning]);
+  const switchSession = useCallback(() => {
+    const nextIsWorkSession = !isWorkSession;
+    const nextDuration =
+      (nextIsWorkSession ? workDuration : breakDuration) * 60;
+    setTimer(null, null, nextDuration, false, nextIsWorkSession);
+    setTime(nextDuration);
+  }, [isWorkSession, workDuration, breakDuration, setTimer]);
+
+  const playAlarm = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((error) => {
+        console.error("Audio playback error:", error);
+      });
+    }
+  }, []);
+
+  const handleTimerComplete = useCallback(() => {
+    setTimer(null, null, duration, false, isWorkSession);
+    playAlarm();
+    if (subscription) {
+      sendNotificationCallback(
+        isWorkSession ? "Work session complete!" : "Break complete!",
+        "00:00"
+      );
+    }
+    switchSession();
+  }, [
+    duration,
+    isWorkSession,
+    subscription,
+    sendNotificationCallback,
+    playAlarm,
+    switchSession,
+    setTimer,
+  ]);
 
   useEffect(() => {
     if ("serviceWorker" in navigator && "PushManager" in window) {
@@ -79,13 +116,32 @@ export default function Pomodoro() {
 
     audioRef.current = new Audio("/sounds/alarm.mp3");
 
+    // Restore timer state
+    if (startTime && endTime && isRunning) {
+      const now = Date.now();
+      const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000));
+      if (remainingSeconds > 0) {
+        setTime(remainingSeconds);
+      } else {
+        handleTimerComplete();
+      }
+    } else {
+      setTime(isWorkSession ? workDuration * 60 : breakDuration * 60);
+    }
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (audioRef.current) audioRef.current.pause();
-      if (notificationIntervalRef.current)
-        clearInterval(notificationIntervalRef.current);
     };
-  }, []);
+  }, [
+    startTime,
+    endTime,
+    isRunning,
+    isWorkSession,
+    workDuration,
+    breakDuration,
+    handleTimerComplete,
+  ]);
 
   async function registerServiceWorker() {
     setIsLoading(true);
@@ -158,143 +214,106 @@ export default function Pomodoro() {
     }
   }
 
-  const switchSession = useCallback(
-    (nextIsWorkSession: boolean) => {
-      const nextDuration =
-        (nextIsWorkSession ? workDuration : breakDuration) * 60;
-      setIsWorkSession(nextIsWorkSession);
-      setTime(nextDuration);
-      setSessionDuration(nextDuration);
-    },
-    [workDuration, breakDuration]
-  );
-
-  const playAlarm = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.play().catch((error) => {
-        console.error("Audio playback error:", error);
-      });
-    }
-  }, []);
-
   useEffect(() => {
-    if (isRunning && subscription) {
-      // Send initial notification
-      sendNotificationCallback(
-        isWorkSession ? "Work session running" : "Break running",
-        formatTime(time)
-      );
-
-      // Update notification every 30 seconds
-      notificationIntervalRef.current = setInterval(() => {
-        if (isRunningRef.current && subscription) {
-          sendNotificationCallback(
-            isWorkSession ? "Work session running" : "Break running",
-            formatTime(time)
-          );
-        }
-      }, 30000);
-    }
-
     if (isRunning) {
       timerRef.current = setInterval(() => {
-        if (!isRunningRef.current) return;
-        setTime((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            if (notificationIntervalRef.current)
-              clearInterval(notificationIntervalRef.current);
-            setIsRunning(false);
-            playAlarm();
+        const now = Date.now();
+        const remainingSeconds = Math.max(
+          0,
+          Math.floor((endTime! - now) / 1000)
+        );
+        setTime(remainingSeconds);
 
-            setTimeout(() => {
-              if (subscription) {
-                sendNotificationCallback(
-                  isWorkSession ? "Work session complete!" : "Break complete!",
-                  formatTime(0),
-                  () => {
-                    switchSession(!isWorkSession);
-                  }
-                );
-              } else {
-                switchSession(!isWorkSession);
-              }
-            }, 0);
+        if (subscription) {
+          sendNotificationCallback(
+            isWorkSession ? "Work session running" : "Break running",
+            formatTime(remainingSeconds)
+          );
+        }
 
-            return 0;
-          }
-          return prev - 1;
-        });
+        if (remainingSeconds <= 0) {
+          clearInterval(timerRef.current!);
+          handleTimerComplete();
+        }
       }, 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (notificationIntervalRef.current)
-        clearInterval(notificationIntervalRef.current);
     }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (notificationIntervalRef.current)
-        clearInterval(notificationIntervalRef.current);
     };
   }, [
     isRunning,
+    endTime,
     isWorkSession,
-    time,
-    workDuration,
-    breakDuration,
-    sendNotificationCallback,
     subscription,
-    switchSession,
-    playAlarm,
+    sendNotificationCallback,
+    handleTimerComplete,
   ]);
 
-  const handleStartPause = () => {
-    setIsRunning(!isRunning);
-    if (!isRunning && subscription) {
-      sendNotificationCallback(
-        isWorkSession ? "Work session running" : "Break running",
-        formatTime(time)
-      );
+  const handleStartPause = async () => {
+    if (!isRunning) {
+      const now = Date.now();
+      const durationSeconds = isWorkSession
+        ? workDuration * 60
+        : breakDuration * 60;
+      const newEndTime = now + durationSeconds * 1000;
+      setTimer(now, newEndTime, durationSeconds, true, isWorkSession);
+      setTime(durationSeconds);
+
+      if (subscription) {
+        await sendNotificationCallback(
+          isWorkSession ? "Work session running" : "Break running",
+          formatTime(durationSeconds)
+        );
+        // Schedule end notification
+        const result = await scheduleEndNotification(
+          JSON.parse(JSON.stringify(subscription)),
+          newEndTime,
+          isWorkSession
+        );
+        if (result.error) {
+          setError(result.error);
+        }
+      }
+    } else {
+      setTimer(startTime, endTime, duration, false, isWorkSession);
     }
   };
 
   const handleReset = useCallback(() => {
-    setIsRunning(false);
-    setIsWorkSession(true);
-    const seconds = workDuration * 60;
-    setTime(seconds);
-    setSessionDuration(seconds);
+    clearTimer();
+    setTime(workDuration * 60);
     if (audioRef.current) audioRef.current.pause();
-    if (notificationIntervalRef.current)
-      clearInterval(notificationIntervalRef.current);
-  }, [workDuration]);
+  }, [workDuration, clearTimer]);
 
   const handleWorkDurationChange = useCallback(
     ([value]: number[]) => {
-      setWorkDuration(value);
+      setDurations(value, breakDuration);
       if (isWorkSession && !isRunning) {
-        const seconds = value * 60;
-        setTime(seconds);
-        setSessionDuration(seconds);
+        setTime(value * 60);
       }
     },
-    [isWorkSession, isRunning]
+    [isWorkSession, isRunning, breakDuration, setDurations]
   );
 
   const handleBreakDurationChange = useCallback(
     ([value]: number[]) => {
-      setBreakDuration(value);
+      setDurations(workDuration, value);
       if (!isWorkSession && !isRunning) {
-        const seconds = value * 60;
-        setTime(seconds);
-        setSessionDuration(seconds);
+        setTime(value * 60);
       }
     },
-    [isWorkSession, isRunning]
+    [isWorkSession, isRunning, workDuration, setDurations]
   );
 
-  const progress = ((sessionDuration - time) / sessionDuration) * 100;
+  const progress =
+    startTime && endTime
+      ? ((duration - time) / duration) * 100
+      : (((isWorkSession ? workDuration * 60 : breakDuration * 60) - time) /
+          (isWorkSession ? workDuration * 60 : breakDuration * 60)) *
+        100;
 
   return (
     <Card className="w-full max-w-md mx-auto border-none shadow-none overflow-hidden">

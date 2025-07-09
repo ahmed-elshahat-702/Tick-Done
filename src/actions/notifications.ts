@@ -1,6 +1,6 @@
 "use server";
 import webpush from "web-push";
-import { User } from "@/models/User"; // Adjust to your User model path
+import { User } from "@/models/User";
 import { auth } from "@/app/auth";
 
 webpush.setVapidDetails(
@@ -76,7 +76,7 @@ export async function sendNotification(message: string, time: string) {
       user.pushSubscription,
       JSON.stringify({
         title: "Pomodoro Timer",
-        body: `${message} - Time remaining: ${time}`,
+        body: `${message} - Time: ${time}`,
         icon: "/icon.png",
       })
     );
@@ -84,5 +84,45 @@ export async function sendNotification(message: string, time: string) {
   } catch (error) {
     console.error("Push error:", error);
     return { error: "Failed to send notification" };
+  }
+}
+
+// Schedule a notification to be sent at a specific time
+export async function scheduleEndNotification(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serializedSubscription: any,
+  endTime: number, // Timestamp in ms
+  isWorkSession: boolean
+) {
+  const session = await auth();
+  if (!session?.user || !session.user.id) {
+    return { error: "Unauthorized" };
+  }
+
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  try {
+    // Store the subscription and schedule info
+    await User.updateOne(
+      { email: session.user.email },
+      {
+        $set: {
+          pushSubscription: serializedSubscription,
+          scheduledNotification: {
+            endTime,
+            message: isWorkSession
+              ? "Work session complete!"
+              : "Break complete!",
+          },
+        },
+      }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Schedule notification error:", error);
+    return { error: "Failed to schedule notification" };
   }
 }

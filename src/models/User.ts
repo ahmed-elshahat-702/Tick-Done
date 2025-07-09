@@ -19,7 +19,11 @@ const UserSchema: Schema = new Schema<TUser>(
         },
       },
       default: null,
-    }, // Allow objects
+    },
+    scheduledNotification: {
+      endTime: { type: Number },
+      message: { type: String },
+    },
   },
   {
     timestamps: true,
