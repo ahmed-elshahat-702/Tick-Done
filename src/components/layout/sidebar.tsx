@@ -6,7 +6,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   AlarmClock,
-  Bell,
   Calendar,
   CalendarDays,
   CheckCircle,
@@ -32,7 +31,6 @@ const navigation = [
   { href: "/completed", label: "Completed", icon: CheckCircle },
   { href: "/categories", label: "Categories", icon: ListTree },
   { href: "/pomodoro", label: "Pomodoro", icon: AlarmClock },
-  { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
 export function Sidebar() {

@@ -1,5 +1,7 @@
 "use server";
 import webpush from "web-push";
+import { User } from "@/models/User"; // Adjust to your User model path
+import { auth } from "@/app/auth";
 
 webpush.setVapidDetails(
   "mailto:ahmedelshahat702@gmail.com",
@@ -7,34 +9,82 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 );
 
-let subscription: PushSubscription | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function subscribeUser(serializedSubscription: any) {
+  const session = await auth();
+  if (!session?.user || !session.user.id) {
+    return { error: "Unauthorized" };
+  }
 
-export async function subscribeUser(sub: PushSubscription) {
-  subscription = sub;
-  return { success: true };
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  try {
+    // Store the subscription in the user's document
+    await User.updateOne(
+      { email: session.user.email },
+      { $set: { pushSubscription: serializedSubscription } }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Subscription error:", error);
+    return { error: "Failed to subscribe" };
+  }
 }
 
 export async function unsubscribeUser() {
-  subscription = null;
-  return { success: true };
+  const session = await auth();
+  if (!session?.user || !session.user.id) {
+    return { error: "Unauthorized" };
+  }
+
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  try {
+    // Remove the subscription from the user's document
+    await User.updateOne(
+      { email: session.user.email },
+      { $unset: { pushSubscription: "" } }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Unsubscription error:", error);
+    return { error: "Failed to unsubscribe" };
+  }
 }
 
 export async function sendNotification(message: string) {
-  if (!subscription) throw new Error("No subscription");
+  const session = await auth();
+  if (!session?.user || !session.user.id) {
+    return { error: "Unauthorized" };
+  }
+
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  if (!user.pushSubscription) {
+    return { error: "No subscription found for user" };
+  }
+
   try {
     await webpush.sendNotification(
-      // @ts-expect-error: convert browser PushSubscription to web-push type
-
-      subscription,
+      user.pushSubscription,
       JSON.stringify({
-        title: "New Notification",
+        title: "Pomodoro Notification",
         body: message,
         icon: "/icon.png",
       })
     );
     return { success: true };
-  } catch (e) {
-    console.error("Push error", e);
-    return { success: false, error: "Failed to send" };
+  } catch (error) {
+    console.error("Push error:", error);
+    return { error: "Failed to send notification" };
   }
 }

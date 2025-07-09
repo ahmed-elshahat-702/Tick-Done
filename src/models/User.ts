@@ -9,6 +9,17 @@ const UserSchema: Schema = new Schema<TUser>(
     image: { type: String, default: "" },
     hashedPassword: { type: String, required: false }, // Made optional for OAuth users
     authProvider: { type: String, required: false },
+    pushSubscription: {
+      type: {
+        endpoint: String,
+        expirationTime: { type: Number, default: null },
+        keys: {
+          p256dh: String,
+          auth: String,
+        },
+      },
+      default: null,
+    }, // Allow objects
   },
   {
     timestamps: true,
