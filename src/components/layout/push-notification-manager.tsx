@@ -164,6 +164,7 @@ function InstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -177,7 +178,28 @@ function InstallPrompt() {
     } finally {
       setIsLoading(false);
     }
+
+    // Capture the beforeinstallprompt event
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (deferredPrompt as any).prompt();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { outcome } = await (deferredPrompt as any).userChoice;
+      if (outcome === "accepted") {
+        setDeferredPrompt(null);
+      }
+    }
+  };
 
   if (isStandalone) {
     return null;
@@ -195,7 +217,11 @@ function InstallPrompt() {
           </div>
         ) : (
           <>
-            <Button className="w-full" disabled={isLoading}>
+            <Button
+              className="w-full"
+              disabled={isLoading || !deferredPrompt}
+              onClick={handleInstallClick}
+            >
               Add to Home Screen
             </Button>
             {isIOS && (
