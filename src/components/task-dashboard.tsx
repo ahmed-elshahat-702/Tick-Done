@@ -1,60 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { FolderPlus, Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sidebar } from "@/components/layout/sidebar";
-import { AddBoth } from "./add-both";
-import { useTaskStore } from "@/lib/store";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
-import { toast } from "sonner";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { FolderPlus, Plus, X } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { AddBoth } from "./add-both";
+import { useTaskStore } from "@/lib/store";
 
 export function TaskDashboard({ children }: { children: React.ReactNode }) {
+  const { isLoading } = useTaskStore();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [modalType, setModalType] = useState<"task" | "category" | null>(null);
-  const { isLoading, setIsLoading, error, setTasks } = useTaskStore();
+
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/tasks");
-        const data = await res.json();
-        if (data.tasks) {
-          setTasks(data.tasks);
-        } else {
-          toast.error(data.error || "Failed to fetch tasks");
-        }
-      } catch (error) {
-        console.error("Failed to fetch tasks", error);
-        toast("Failed to fetch tasks");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTasks();
-  }, [setIsLoading, setTasks]);
-
-  useEffect(() => {
-    if (error) {
-      toast(error);
-      console.error("Error loading tasks:", error);
+    if (
+      status !== "loading" &&
+      !session?.user?.id &&
+      status === "unauthenticated"
+    ) {
+      router.push("/auth/signin");
     }
-  }, [error]);
+  }, [status, router, session?.user]);
 
-  if (isLoading) {
+  if (status === "loading") {
     return (
-      <div className="flex items-center justify-center w-full h-screen">
-        <div className="text-center space-y-4">
-          <LoadingSpinner className="h-8 w-8 mx-auto" />
-          <p className="text-muted-foreground">Loading your tasks...</p>
-        </div>
+      <div className="w-full h-screen flex flex-col items-center justify-center">
+        <LoadingSpinner />
+        <p className="mt-4 text-gray-500 text-lg animate-pulse">
+          Loading your dashboard...
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-50">
+        <LoadingSpinner />
+        <p className="mt-4 text-gray-500 text-lg animate-pulse">
+          Redirecting to sign in...
+        </p>
       </div>
     );
   }
