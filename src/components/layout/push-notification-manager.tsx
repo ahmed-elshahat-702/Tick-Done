@@ -163,46 +163,18 @@ function PushNotificationManager() {
 function InstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    try {
-      setIsIOS(
-        /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          !(window as any).MSStream
-      );
-      setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
-    } finally {
-      setIsLoading(false);
-    }
+    setIsIOS(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    );
 
-    // Capture the beforeinstallprompt event
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
   }, []);
 
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (deferredPrompt as any).prompt();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { outcome } = await (deferredPrompt as any).userChoice;
-      if (outcome === "accepted") {
-        setDeferredPrompt(null);
-      }
-    }
-  };
-
   if (isStandalone) {
-    return null;
+    return null; // Don't show install button if already installed
   }
 
   return (
@@ -211,34 +183,22 @@ function InstallPrompt() {
         <CardTitle className="text-xl">Install App</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isLoading ? (
-          <div className="flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <Button
-              className="w-full"
-              disabled={isLoading || !deferredPrompt}
-              onClick={handleInstallClick}
-            >
-              Add to Home Screen
-            </Button>
-            {isIOS && (
-              <p className="text-muted-foreground">
-                To install this app on your iOS device, tap the share button
-                <span role="img" aria-label="share icon" className="mx-1">
-                  ⎋
-                </span>
-                and then &quot;Add to Home Screen&quot;
-                <span role="img" aria-label="plus icon" className="mx-1">
-                  ➕
-                </span>
-                .
-              </p>
-            )}
-          </>
-        )}
+        <>
+          <Button className="w-full">Add to Home Screen</Button>
+          {isIOS && (
+            <p className="text-muted-foreground">
+              To install this app on your iOS device, tap the share button
+              <span role="img" aria-label="share icon" className="mx-1">
+                ⎋
+              </span>
+              and then &quot;Add to Home Screen&quot;
+              <span role="img" aria-label="plus icon" className="mx-1">
+                ➕
+              </span>
+              .
+            </p>
+          )}
+        </>
       </CardContent>
     </Card>
   );
