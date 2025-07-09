@@ -37,6 +37,7 @@ export default function Pomodoro() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isRunningRef = useRef(isRunning);
   const [sessionDuration, setSessionDuration] = useState(workDuration * 60);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const sendNotificationCallback = useCallback(
     async (message: string, onSuccess?: () => void) => {
@@ -67,8 +68,12 @@ export default function Pomodoro() {
       registerServiceWorker();
     }
 
+    // Initialize audio element
+    audioRef.current = new Audio("/sounds/alarm.mp3");
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (audioRef.current) audioRef.current.pause();
     };
   }, []);
 
@@ -154,6 +159,14 @@ export default function Pomodoro() {
     [workDuration, breakDuration]
   );
 
+  const playAlarm = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((error) => {
+        console.error("Audio playback error:", error);
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (isRunning) {
       if (subscription) {
@@ -167,6 +180,7 @@ export default function Pomodoro() {
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             setIsRunning(false);
+            playAlarm();
 
             setTimeout(() => {
               if (subscription) {
@@ -197,6 +211,7 @@ export default function Pomodoro() {
     sendNotificationCallback,
     subscription,
     switchSession,
+    playAlarm,
   ]);
 
   const formatTime = (seconds: number) => {
@@ -215,6 +230,7 @@ export default function Pomodoro() {
     const seconds = workDuration * 60;
     setTime(seconds);
     setSessionDuration(seconds);
+    if (audioRef.current) audioRef.current.pause();
   }, [workDuration]);
 
   const handleWorkDurationChange = useCallback(
@@ -370,8 +386,8 @@ export default function Pomodoro() {
               id="work-duration"
               value={[workDuration]}
               onValueChange={handleWorkDurationChange}
-              min={1 / 12}
-              max={60}
+              min={15}
+              max={90}
               step={5}
               disabled={isRunning || isLoading}
               className={`h-2 rounded-full ${
