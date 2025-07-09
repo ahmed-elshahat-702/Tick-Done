@@ -45,18 +45,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           response_type: "code",
         },
       },
-      profile(profile: {
-        sub: string;
-        name: string;
-        email: string;
-        picture: string;
-      }) {
+      profile(profile) {
         const user: AppUser = {
           id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
           bio: "",
+          authProvider: "google",
         };
         return user;
       },
@@ -64,19 +60,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     GitHub({
       clientId: process.env.AUTH_GITHUB_ID,
       clientSecret: process.env.AUTH_GITHUB_SECRET,
-      profile(profile: {
-        login: string | null | undefined;
-        id: number;
-        name?: string | null;
-        email?: string | null;
-        avatar_url?: string;
-      }) {
+      profile(profile) {
         const user: AppUser = {
           id: profile.id?.toString(),
           name: profile.name || profile.login,
           email: profile.email || "",
           image: profile.avatar_url || "",
           bio: "",
+          authProvider: "github",
         };
         return user;
       },
@@ -149,18 +140,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             bio: "",
             authProvider: "google",
           });
-        } else {
-          if (dbUser.authProvider !== "google") {
-            await User.updateOne(
-              { email: profile.email },
-              {
-                name: profile.name,
-                image: profile.picture,
-                authProvider: "google",
-              }
-            );
-          }
+        } else if (dbUser.authProvider !== "google") {
+          await User.updateOne(
+            { email: profile.email },
+            {
+              name: profile.name,
+              image: profile.picture,
+              authProvider: "google",
+            }
+          );
         }
+        // Store MongoDB _id in profile for jwt callback
+        profile.id = dbUser._id.toString();
         return true;
       }
       if (account?.provider === "github" && profile) {
@@ -183,6 +174,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
           );
         }
+        // Store MongoDB _id in profile for jwt callback
+        profile.id = dbUser._id.toString();
         return true;
       }
       return true;
@@ -201,7 +194,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         await connectDB();
         const dbUser = await User.findOne({ email: appToken.email });
         if (dbUser) {
-          appToken.id = dbUser._id;
+          appToken.id = dbUser._id.toString();
           appToken.name = dbUser.name;
           appToken.image = dbUser.image;
           appToken.bio = dbUser.bio || "";
@@ -213,7 +206,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const appToken = token as AppJWT;
       if (appToken.id && session.user) {
         session.user = {
-          id: String(appToken.id),
+          id: String(appToken.id), // MongoDB _id as string
           name: appToken.name,
           email: appToken.email ?? "",
           image: appToken.image,
