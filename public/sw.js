@@ -10,6 +10,8 @@ self.addEventListener("push", function (event) {
         dateOfArrival: Date.now(),
         primaryKey: "2",
       },
+      tag: "pomodoro-timer", // Unique tag to replace old notifications
+      renotify: true,
     };
     event.waitUntil(self.registration.showNotification(data.title, options));
   }

@@ -1,6 +1,6 @@
 "use server";
 import webpush from "web-push";
-import { User } from "@/models/User"; // Adjust to your User model path
+import { User } from "@/models/User";
 import { auth } from "@/app/auth";
 
 webpush.setVapidDetails(
@@ -22,7 +22,6 @@ export async function subscribeUser(serializedSubscription: any) {
   }
 
   try {
-    // Store the subscription in the user's document
     await User.updateOne(
       { email: session.user.email },
       { $set: { pushSubscription: serializedSubscription } }
@@ -46,7 +45,6 @@ export async function unsubscribeUser() {
   }
 
   try {
-    // Remove the subscription from the user's document
     await User.updateOne(
       { email: session.user.email },
       { $unset: { pushSubscription: "" } }
@@ -58,7 +56,7 @@ export async function unsubscribeUser() {
   }
 }
 
-export async function sendNotification(message: string) {
+export async function sendNotification(message: string, time: string) {
   const session = await auth();
   if (!session?.user || !session.user.id) {
     return { error: "Unauthorized" };
@@ -77,8 +75,8 @@ export async function sendNotification(message: string) {
     await webpush.sendNotification(
       user.pushSubscription,
       JSON.stringify({
-        title: "Pomodoro Notification",
-        body: message,
+        title: "Pomodoro Timer",
+        body: `${message} - Time: ${time}`,
         icon: "/icon.png",
       })
     );
@@ -86,5 +84,45 @@ export async function sendNotification(message: string) {
   } catch (error) {
     console.error("Push error:", error);
     return { error: "Failed to send notification" };
+  }
+}
+
+// Schedule a notification to be sent at a specific time
+export async function scheduleEndNotification(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serializedSubscription: any,
+  endTime: number, // Timestamp in ms
+  isWorkSession: boolean
+) {
+  const session = await auth();
+  if (!session?.user || !session.user.id) {
+    return { error: "Unauthorized" };
+  }
+
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  try {
+    // Store the subscription and schedule info
+    await User.updateOne(
+      { email: session.user.email },
+      {
+        $set: {
+          pushSubscription: serializedSubscription,
+          scheduledNotification: {
+            endTime,
+            message: isWorkSession
+              ? "Work session complete!"
+              : "Break complete!",
+          },
+        },
+      }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Schedule notification error:", error);
+    return { error: "Failed to schedule notification" };
   }
 }
