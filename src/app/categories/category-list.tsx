@@ -1,25 +1,31 @@
 "use client";
 
-import { getTaskCategories } from "@/actions/task-categories";
 import CategoryCard from "@/app/categories/category-card";
+import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { useTaskStore } from "@/lib/store";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
 const CategoryList = () => {
-  const { categories, setCategories } = useTaskStore();
+  const { categories, error, isLoading } = useTaskStore();
 
   useEffect(() => {
-    async function fetchCategories() {
-      const res = await getTaskCategories();
-      if (res.categories) {
-        setCategories(res.categories);
-      } else {
-        toast.error(res.error || "Failed to fetch categories");
-      }
+    if (error) {
+      toast(error);
+      console.error("Error loading tasks:", error);
     }
-    fetchCategories();
-  }, [setCategories]);
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-screen">
+        <div className="text-center space-y-4">
+          <LoadingSpinner className="h-8 w-8 mx-auto" />
+          <p className="text-muted-foreground">Loading your categories...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="space-y-6">

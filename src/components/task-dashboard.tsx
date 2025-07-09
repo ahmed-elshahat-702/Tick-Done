@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AddBoth } from "./add-both";
 import { useTaskStore } from "@/lib/store";
+import { toast } from "sonner";
+import { getTaskCategories } from "@/actions/task-categories";
 
 export function TaskDashboard({ children }: { children: React.ReactNode }) {
   const { isLoading } = useTaskStore();
@@ -24,6 +26,7 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
 
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { setIsLoading, setTasks, setCategories } = useTaskStore();
 
   useEffect(() => {
     if (
@@ -32,8 +35,47 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
       status === "unauthenticated"
     ) {
       router.push("/auth/signin");
+    } else if (status === "authenticated") {
+      try {
+        setIsLoading(true);
+        const fetchTasks = async () => {
+          try {
+            const res = await fetch("/api/tasks");
+            const data = await res.json();
+            if (data.tasks) {
+              setTasks(data.tasks);
+            } else {
+              toast.error(data.error || "Failed to fetch tasks");
+            }
+          } catch (error) {
+            console.error("Failed to fetch tasks", error);
+            toast("Failed to fetch tasks");
+          }
+        };
+        const fetchCategories = async () => {
+          try {
+            const res = await getTaskCategories();
+            if (res.categories) {
+              setCategories(res.categories);
+            } else {
+              toast.error(res.error || "Failed to fetch categories");
+            }
+          } catch (error) {
+            console.error("Failed to fetch tasks", error);
+            toast("Failed to fetch tasks");
+          }
+        };
+
+        fetchTasks();
+        fetchCategories();
+      } catch (error) {
+        console.error("Failed to fetch tasks", error);
+        toast("Failed to fetch tasks");
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [status, router, session?.user]);
+  }, [status, router, session?.user, setIsLoading, setTasks, setCategories]);
 
   if (status === "loading") {
     return (

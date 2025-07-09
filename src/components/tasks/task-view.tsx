@@ -7,28 +7,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 export function TaskView() {
-  const { isLoading, setIsLoading, error, tasks, setTasks } = useTaskStore();
-
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/tasks");
-        const data = await res.json();
-        if (data.tasks) {
-          setTasks(data.tasks);
-        } else {
-          toast.error(data.error || "Failed to fetch tasks");
-        }
-      } catch (error) {
-        console.error("Failed to fetch tasks", error);
-        toast("Failed to fetch tasks");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTasks();
-  }, [setIsLoading, setTasks]);
+  const { isLoading, error, tasks } = useTaskStore();
 
   useEffect(() => {
     if (error) {
