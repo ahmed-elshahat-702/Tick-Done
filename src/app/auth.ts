@@ -107,6 +107,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new AuthError("Invalid password");
         }
 
+        const isMyTaskListExist = await await TaskList.findOne({
+          name: "My Tasks",
+        });
+
+        if (!isMyTaskListExist) {
+          await TaskList.create({
+            name: "My Tasks",
+            userId: user._id,
+            description: "",
+            color: "#000000",
+          });
+        }
+
         const appUser: AppUser = {
           id: user._id,
           name: user.name,
