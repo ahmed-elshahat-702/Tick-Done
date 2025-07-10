@@ -33,6 +33,10 @@ const TaskSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "TaskCategory",
     },
+    listId: {
+      type: Schema.Types.ObjectId,
+      ref: "TaskList",
+    },
     subTasks: [SubTaskSchema],
   },
   {

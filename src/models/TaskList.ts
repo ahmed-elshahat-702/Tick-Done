@@ -1,16 +1,15 @@
-import { TCategory } from "@/types/category";
+import { TList } from "@/types/list";
 import mongoose, { Schema } from "mongoose";
 
-const taskCategorySchema = new Schema(
+const taskListSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    parentId: { type: String, default: null },
+    description: { type: String },
     color: { type: String, default: "#000000" },
   },
   { timestamps: true }
 );
 
-export const TaskCategory =
-  mongoose.models.TaskCategory ||
-  mongoose.model<TCategory>("TaskCategory", taskCategorySchema);
+export const TaskList =
+  mongoose.models.TaskList || mongoose.model<TList>("TaskList", taskListSchema);

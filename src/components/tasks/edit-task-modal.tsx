@@ -56,9 +56,13 @@ export function EditTaskModal({
   onOpenChange,
   task,
 }: EditTaskModalProps) {
-  const { editTask, isHandling, setIsHandling, categories } = useTaskStore();
+  const { editTask, isHandling, setIsHandling, categories, lists } =
+    useTaskStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
+
+  const myTasksList = lists.find((l) => l.name === "My Tasks");
+  const myTasksListId = myTasksList?._id;
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -70,6 +74,7 @@ export function EditTaskModal({
       tag: task?.tag || "",
       subTasks: task?.subTasks || [],
       categoryId: task?.categoryId ?? null,
+      listId: task?.listId || myTasksListId || "",
     },
   });
 
@@ -84,6 +89,7 @@ export function EditTaskModal({
         tag: task.tag || "",
         subTasks: task.subTasks || [],
         categoryId: task.categoryId ?? null,
+        listId: task.listId || myTasksListId || "",
       });
       setSubTasks(task.subTasks || []);
     } else {
@@ -95,10 +101,11 @@ export function EditTaskModal({
         tag: "",
         subTasks: [],
         categoryId: null,
+        listId: "",
       });
       setSubTasks([]);
     }
-  }, [task, form]);
+  }, [task, form, myTasksListId]);
 
   const addSubTask = () => {
     if (!newSubTaskTitle.trim()) {
@@ -154,6 +161,7 @@ export function EditTaskModal({
             tag: res?.task?.tag || "",
             subTasks: res?.task?.subTasks || [],
             categoryId: res?.task?.categoryId ?? null,
+            listId: task.listId || myTasksListId || "",
           });
         }
       } catch (error) {
@@ -162,7 +170,16 @@ export function EditTaskModal({
       } finally {
         setIsHandling(false);
       }
-      form.reset();
+      form.reset({
+        title: task.title,
+        description: task.description || "",
+        priority: task.priority || "medium",
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        tag: task.tag || "",
+        subTasks: task.subTasks || [],
+        categoryId: task.categoryId ?? null,
+        listId: task.listId || myTasksListId || "",
+      });
       setSubTasks([]);
       setNewSubTaskTitle("");
       onOpenChange(false);
@@ -175,13 +192,14 @@ export function EditTaskModal({
   const handleClose = () => {
     if (!isHandling) {
       form.reset({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: undefined,
-        tag: "",
-        subTasks: [],
-        categoryId: null,
+        title: task.title,
+        description: task.description || "",
+        priority: task.priority || "medium",
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        tag: task.tag || "",
+        subTasks: task.subTasks || [],
+        categoryId: task.categoryId ?? null,
+        listId: task.listId || myTasksListId || "",
       });
       setSubTasks(task?.subTasks || []);
       setNewSubTaskTitle("");
@@ -355,39 +373,84 @@ export function EditTaskModal({
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="categoryId"
-              render={({ field }) => (
-                <FormItem className="w-full">
-                  <FormLabel>Category</FormLabel>
-                  <Select
-                    onValueChange={(value) =>
-                      field.onChange(value === "none" ? null : value)
-                    }
-                    defaultValue={field.value || "none"}
-                    disabled={isHandling}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category._id} value={category._id}>
-                          <span className="truncate max-w-64 sm:max-w-90">
-                            {category.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem className="w-full">
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        field.onChange(value === "none" ? null : value)
+                      }
+                      defaultValue={field.value || "none"}
+                      disabled={isHandling}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category._id} value={category._id}>
+                            <span className="truncate max-w-64 sm:max-w-90">
+                              {category.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="listId"
+                render={({ field }) => (
+                  <FormItem className="w-full">
+                    <FormLabel>List</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value)}
+                      defaultValue={task.listId}
+                      value={field.value}
+                      disabled={isHandling}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select list" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {myTasksListId && (
+                          <SelectItem value={myTasksListId!}>
+                            My Tasks
+                          </SelectItem>
+                        )}
+                        {lists
+                          .filter((list) => list.name !== "My Tasks") // avoid duplication
+                          .map((list) => (
+                            <SelectItem
+                              key={list._id}
+                              value={list._id}
+                              className="text-sm"
+                            >
+                              <span className="truncate max-w-64 sm:max-w-90">
+                                {list.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

@@ -33,10 +33,6 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-interface TaskCardProps {
-  task: TTask & { categoryName?: string; categoryColor?: string }; // Extend TTask with optional category fields
-}
-
 const priorityColors = {
   low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   medium:
@@ -51,7 +47,9 @@ const statusColors = {
   done: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
 };
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task }: { task: TTask }) {
+  const { categories } = useTaskStore();
+
   const { editTask, removeTask, isHandling, setIsHandling } = useTaskStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isTaskUpdating, setIsTaskUpdating] = useState(false);
@@ -62,6 +60,8 @@ export function TaskCard({ task }: TaskCardProps) {
 
   const dingAudio =
     typeof Audio !== "undefined" ? new Audio("/sounds/check.mp3") : null;
+
+  const taskCategory = categories.find((c) => c._id === task.categoryId);
 
   const handleStatusChange = async (checked: boolean) => {
     try {
@@ -227,17 +227,17 @@ export function TaskCard({ task }: TaskCardProps) {
               )}
 
               <div className="flex items-center gap-2 flex-wrap">
-                {task.categoryName && (
+                {taskCategory && taskCategory.name && (
                   <Badge
                     variant="outline"
                     className="text-xs break-words whitespace-normal"
                     style={{
-                      backgroundColor: `${task.categoryColor}20`, // 20% opacity for background
-                      color: task.categoryColor,
-                      borderColor: task.categoryColor,
+                      backgroundColor: `${taskCategory.color}20`, // 20% opacity for background
+                      color: taskCategory.color,
+                      borderColor: taskCategory.color,
                     }}
                   >
-                    <span className="break-all">{task.categoryName}</span>
+                    <span className="break-all">{taskCategory.name}</span>
                   </Badge>
                 )}
 

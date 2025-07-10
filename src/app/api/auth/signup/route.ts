@@ -2,6 +2,7 @@ import connectDB from "@/lib/mongodb";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { User } from "@/models/User";
+import { TaskList } from "@/models/TaskList";
 
 export async function POST(req: Request) {
   try {
@@ -31,6 +32,13 @@ export async function POST(req: Request) {
     });
 
     await newUser.save();
+
+    await TaskList.create({
+      name: "My Tasks",
+      userId: newUser._id,
+      description: "",
+      color: "#000000",
+    });
 
     return NextResponse.json(
       { message: "User created", userId: newUser._id },

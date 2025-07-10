@@ -9,8 +9,8 @@ import {
   Calendar,
   CalendarDays,
   CheckCircle,
+  Folders,
   Home,
-  ListTree,
   LogOut,
   Menu,
   User,
@@ -29,7 +29,7 @@ const navigation = [
   { href: "/today", label: "Today", icon: CalendarDays },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/completed", label: "Completed", icon: CheckCircle },
-  { href: "/categories", label: "Categories", icon: ListTree },
+  { href: "/categories", label: "Categories", icon: Folders },
   { href: "/pomodoro", label: "Pomodoro", icon: AlarmClock },
 ];
 

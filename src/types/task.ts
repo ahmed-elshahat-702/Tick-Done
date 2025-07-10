@@ -10,6 +10,7 @@ export interface TTask {
   updatedAt: Date;
   userId: string;
   categoryId?: string;
+  listId?: string;
   subTasks?: SubTask[];
 }
 

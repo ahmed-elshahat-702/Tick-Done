@@ -47,8 +47,10 @@ import { v4 as uuidv4 } from "uuid";
 import { Badge } from "./ui/badge";
 import { MultiSelect } from "./ui/multi-select";
 import { createTaskCategory } from "@/actions/task-categories";
+import { TaskListFormData, taskListSchema } from "@/validation/List";
+import { createTaskList } from "@/actions/task-lists";
 
-type ModalType = "task" | "category" | null;
+type ModalType = "task" | "category" | "list" | null;
 
 interface AddBothProps {
   open: boolean;
@@ -57,8 +59,16 @@ interface AddBothProps {
 }
 
 export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
-  const { addTask, isHandling, setIsHandling, categories, addCategory, tasks } =
-    useTaskStore();
+  const {
+    addTask,
+    isHandling,
+    setIsHandling,
+    categories,
+    addCategory,
+    tasks,
+    lists,
+    addList,
+  } = useTaskStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>([]);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
   const [activeModal, setActiveModal] = useState<ModalType>(
@@ -74,6 +84,14 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
 
   const isTaskModalOpen = activeModal === "task" && open;
   const isCategoryModalOpen = activeModal === "category" && open;
+  const isListModalOpen = activeModal === "list" && open;
+
+  const myTasksList = lists.find((l) => l.name === "My Tasks");
+  const myTasksListId = myTasksList?._id;
+
+  const filteredTasks = tasks.filter(
+    (task) => !task.listId || task.listId === myTasksList?._id
+  );
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -85,14 +103,31 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
       tag: "",
       subTasks: [],
       categoryId: null,
+      listId: myTasksListId,
     },
   });
+
+  useEffect(() => {
+    if (myTasksListId) {
+      form.setValue("listId", myTasksListId);
+    }
+  }, [myTasksListId, form]);
 
   const categoryForm = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
       parentId: null,
+      color: "#000000",
+      taskIds: [],
+    },
+  });
+
+  const listForm = useForm<TaskListFormData>({
+    resolver: zodResolver(taskListSchema),
+    defaultValues: {
+      name: "",
+      description: "",
       color: "#000000",
       taskIds: [],
     },
@@ -143,7 +178,16 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
       } else {
         toast.error("Failed to add task");
       }
-      form.reset();
+      form.reset({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: undefined,
+        tag: "",
+        subTasks: [],
+        categoryId: null,
+        listId: myTasksListId,
+      });
       setSubTasks([]);
       setNewSubTaskTitle("");
       onOpenChange(false);
@@ -180,10 +224,45 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
     }
   };
 
+  const onListSubmit = async (data: TaskListFormData) => {
+    try {
+      setIsHandling(true);
+      const res = await createTaskList(data);
+      if (res?.success && res?.taskList) {
+        addList(res.taskList);
+        if (data.taskIds) {
+          useTaskStore
+            .getState()
+            .updateTasksList(data.taskIds, res.taskList._id);
+        }
+        toast.success(res.success);
+      } else {
+        toast.error(res.error || "Failed to create list");
+      }
+      listForm.reset();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.");
+      console.error(error);
+    } finally {
+      setIsHandling(false);
+    }
+  };
+
   const handleClose = () => {
     if (!isHandling) {
-      form.reset();
+      form.reset({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: undefined,
+        tag: "",
+        subTasks: [],
+        categoryId: null,
+        listId: myTasksListId,
+      });
       categoryForm.reset();
+      listForm.reset();
       setSubTasks([]);
       setNewSubTaskTitle("");
       setActiveModal(null);
@@ -352,43 +431,88 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="categoryId"
-                render={({ field }) => (
-                  <FormItem className="w-full">
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={(value) =>
-                        field.onChange(value === "none" ? null : value)
-                      }
-                      defaultValue={field.value || "none"}
-                      disabled={isHandling}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem
-                            key={category._id}
-                            value={category._id}
-                            className="text-sm"
-                          >
-                            <span className="truncate max-w-64 sm:max-w-90">
-                              {category.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel>Category</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === "none" ? null : value)
+                        }
+                        defaultValue={field.value || "none"}
+                        disabled={isHandling}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {categories.map((category) => (
+                            <SelectItem
+                              key={category._id}
+                              value={category._id}
+                              className="text-sm"
+                            >
+                              <span className="truncate max-w-64 sm:max-w-90">
+                                {category.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="listId"
+                  render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel>List</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(value)}
+                        defaultValue={myTasksListId}
+                        value={field.value}
+                        disabled={isHandling}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select list" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {myTasksListId && (
+                            <SelectItem value={myTasksListId}>
+                              My Tasks
+                            </SelectItem>
+                          )}
+                          {lists
+                            .filter((list) => list.name !== "My Tasks") // avoid duplication
+                            .map((list) => (
+                              <SelectItem
+                                key={list._id}
+                                value={list._id}
+                                className="text-sm"
+                              >
+                                <span className="truncate max-w-64 sm:max-w-90">
+                                  {list.name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
                 name="tag"
@@ -564,6 +688,138 @@ export function AddBoth({ open, onOpenChange, initialModal }: AddBothProps) {
                   </FormItem>
                 )}
               />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isHandling}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isHandling}>
+                  {isHandling ? (
+                    <>
+                      <LoadingSpinner className="mr-2 h-4 w-4" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isListModalOpen} onOpenChange={(o) => !o && handleClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Task List</DialogTitle>
+          </DialogHeader>
+
+          <Form {...listForm}>
+            <form
+              onSubmit={listForm.handleSubmit(onListSubmit)}
+              className="space-y-4"
+            >
+              {/* Title */}
+              <FormField
+                control={listForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>List Title *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter a name"
+                        disabled={isHandling}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Description */}
+              <FormField
+                control={listForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Optional description"
+                        disabled={isHandling}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Assign Tasks */}
+              <FormField
+                control={listForm.control}
+                name="taskIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign Tasks</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={filteredTasks.map((task) => ({
+                          value: task._id,
+                          label: task.title,
+                        }))}
+                        selected={
+                          field.value?.map((id) => ({
+                            value: id,
+                            label:
+                              tasks.find((task) => task._id === id)?.title ||
+                              id,
+                          })) || []
+                        }
+                        onChange={(selected) =>
+                          field.onChange(selected.map((option) => option.value))
+                        }
+                        placeholder="Select tasks..."
+                        disabled={isHandling}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Color */}
+              <FormField
+                control={listForm.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="color"
+                          className="h-9 w-12 p-0 border-none"
+                          {...field}
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          {field.value}
+                        </span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Buttons */}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"

@@ -7,6 +7,7 @@ import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 
 import type { JWT } from "next-auth/jwt";
+import { TaskList } from "@/models/TaskList";
 
 interface AppUser {
   id: string;
@@ -140,6 +141,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             bio: "",
             authProvider: "google",
           });
+          await TaskList.create({
+            name: "My Tasks",
+            userId: dbUser._id,
+            description: "",
+            color: "#000000",
+          });
         } else if (dbUser.authProvider !== "google") {
           await User.updateOne(
             { email: profile.email },
@@ -163,6 +170,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             image: profile.avatar_url,
             bio: "",
             authProvider: "github",
+          });
+          await TaskList.create({
+            name: "My Tasks",
+            userId: dbUser._id,
+            description: "",
+            color: "#000000",
           });
         } else if (dbUser && dbUser.authProvider !== "github") {
           await User.updateOne(

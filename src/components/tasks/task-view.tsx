@@ -1,10 +1,11 @@
 "use client";
 
 import { useTaskStore } from "@/lib/store";
-import CategoriesTabs from "../categories-tabs";
+// import CategoriesTabs from "../categories-tabs";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import ListsView from "@/components/lists/lists-view";
 
 export function TaskView() {
   const { isLoading, error, tasks } = useTaskStore();
@@ -31,14 +32,15 @@ export function TaskView() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">All tasks</h2>
+          <h2 className="text-2xl font-bold tracking-tight">My Tasks</h2>
           <p className="text-muted-foreground">
             {tasks.length}
             {tasks.length === 1 ? "task" : "tasks"}
           </p>
         </div>
       </div>
-      <CategoriesTabs tasks={tasks} />
+      <ListsView />
+      {/* <CategoriesTabs tasks={tasks} /> */}
     </div>
   );
 }

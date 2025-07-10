@@ -1,21 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isToday,
-  isSameDay,
-} from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useTaskStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import {
+  eachDayOfInterval,
+  endOfMonth,
+  format,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+} from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 export function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -56,8 +56,8 @@ export function CalendarView() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="text-lg">
@@ -154,35 +154,7 @@ export function CalendarView() {
               {selectedTasks.length > 0 ? (
                 <div className="space-y-3">
                   {selectedTasks.map((task) => (
-                    <div key={`${task._id}`} className="p-3 border rounded-lg">
-                      <h4 className="font-medium text-sm truncate line-clamp-1">
-                        {task.title}
-                      </h4>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {task.description}
-                        </p>
-                      )}
-                      <div className="flex gap-2 mt-2">
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-xs",
-                            task.priority === "high" &&
-                              "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-                            task.priority === "medium" &&
-                              "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-                            task.priority === "low" &&
-                              "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          )}
-                        >
-                          {task.priority}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {task.status.replace("-", " ")}
-                        </Badge>
-                      </div>
-                    </div>
+                    <TaskCard key={task._id} task={task} />
                   ))}
                 </div>
               ) : (

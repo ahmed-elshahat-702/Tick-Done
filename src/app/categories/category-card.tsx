@@ -12,20 +12,28 @@ import {
 } from "@/components/ui/dialog";
 import { useTaskStore } from "@/lib/store";
 import { TCategory } from "@/types/category";
-import { ChevronDown, ChevronUp, Edit, Trash2 } from "lucide-react";
+import { ChevronDown, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import EditCategoryModel from "./edit-category-model";
+import { TaskCard } from "@/components/tasks/task-card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface CategoryCardProps {
   category: TCategory;
+  setSelectedCategoryId: (id: string | null) => void;
 }
 
-const CategoryCard = ({ category }: CategoryCardProps) => {
+const CategoryCard = ({
+  category,
+  setSelectedCategoryId,
+}: CategoryCardProps) => {
   const { categories, setCategories, tasks, setTasks } = useTaskStore();
   const [isHandling, setIsHandling] = useState(false);
-  const [isSubCategoriesOpen, setIsSubCategoriesOpen] = useState(false);
-  const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<TCategory | null>(
     null
@@ -61,15 +69,14 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
           ];
         };
         const idsToRemove = getDescendantIds(categoryId);
-        // Update state to remove the category and all its descendants
         setCategories(categories.filter((c) => !idsToRemove.includes(c._id)));
-        // Remove associated tasks if deleteTasks is true
         if (deleteTasks) {
           const taskIdsToRemove = tasks
             .filter((task) => idsToRemove.includes(task.categoryId || ""))
             .map((task) => task._id);
           setTasks(tasks.filter((task) => !taskIdsToRemove.includes(task._id)));
         }
+        setSelectedCategoryId(categories[0]._id || null);
         toast.success(res.success);
       } else {
         toast.error(res.error || "Failed to delete category.");
@@ -84,21 +91,11 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
     }
   };
 
-  // const parentName = category.parentId
-  //   ? categories.find((c) => c._id === category.parentId)?.name || "Unknown"
-  //   : null;
-
-  // Find sub-categories where parentId matches the current category's _id
   const subCategories = categories.filter((c) => c.parentId === category._id);
-
-  // Filter tasks for the current category and its sub-categories
   const filteredTasks = tasks.filter(
-    (task) =>
-      task.categoryId === category._id ||
-      subCategories.some((subCategory) => task.categoryId === subCategory._id)
+    (task) => task.categoryId === category._id
   );
 
-  // Get tasks and sub-categories for the category being deleted
   const deleteCategoryTasks = categoryToDelete
     ? tasks.filter(
         (task) =>
@@ -114,185 +111,126 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
     : [];
 
   return (
-    <div className="relative bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow duration-300 w-full">
-      {/* Actions (Top Right) */}
-      <div className="absolute top-4 right-4 flex gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleEditCategory(category)}
-          disabled={isHandling}
-          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-full"
-          aria-label={`Edit category ${category.name}`}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleOpenDeleteDialog(category)}
-          disabled={isHandling}
-          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-full"
-          aria-label={`Delete category ${category.name}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Header Section */}
-      <div className="flex items-center gap-3 mb-4">
-        <div
-          className="h-10 w-10 rounded-full border-2 border-gray-200 dark:border-zinc-600 flex-shrink-0"
-          style={{ backgroundColor: category.color || "#000000" }}
-          aria-label={`Category color for ${category.name}`}
-        />
-        <div className="flex flex-col break-words whitespace-normal">
-          <h3 className="text-base sm:text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate max-w-[220px] block">
-            {category.name}
-          </h3>
-          {/* 
-          {parentName && (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 italic break-words leading-tight">
-              Parent: {parentName}
-            </span>
-          )} */}
+    <div className="space-y-4 bg-muted/50 dark:bg-muted/100 min-h-96 rounded-md p-4 md:p-6">
+      <div className="relative w-full space-y-1 p-2">
+        <div className="flex items-center gap-3">
+          <div
+            className="h-6 w-6 rounded-full flex-shrink-0"
+            style={{ backgroundColor: category.color || "#000000" }}
+            aria-label={`Category color for ${category.name}`}
+          />
+          <h1 className="font-bold">{category.name}</h1>
         </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-300 mb-4 bg-gray-50 dark:bg-zinc-900/50 rounded-lg p-2">
-        <span>
-          <strong>{filteredTasks.length}</strong> task
-          {filteredTasks.length !== 1 ? "s" : ""}
-        </span>
-        <span>
-          <strong>{subCategories.length}</strong> sub-categor
-          {subCategories.length !== 1 ? "ies" : "y"}
-        </span>
-      </div>
-
-      {/* Sub-Categories Section */}
-      {subCategories.length > 0 && (
-        <div className="mb-4">
-          <button
-            onClick={() => setIsSubCategoriesOpen(!isSubCategoriesOpen)}
-            className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white w-full py-2 transition-colors duration-200"
-            aria-expanded={isSubCategoriesOpen}
-            aria-controls="sub-categories"
+        {subCategories.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {subCategories.length} sub-categor
+            {subCategories.length !== 1 ? "ies" : "y"}
+          </p>
+        )}
+        <div className="absolute top-2 right-2 flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleEditCategory(category)}
+            disabled={isHandling}
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-full"
+            aria-label={`Edit category ${category.name}`}
           >
-            {isSubCategoriesOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            Sub-Categories
-          </button>
-          {isSubCategoriesOpen && (
-            <ul
-              id="sub-categories"
-              className="mt-2 space-y-2 pl-4 transition-all duration-300 ease-in-out"
-            >
-              {subCategories.map((subCategory) => (
-                <li
-                  key={subCategory._id}
-                  className="flex items-center justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700/50 rounded-md p-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-5 w-5 rounded-full border border-gray-300 dark:border-zinc-600"
-                      style={{
-                        backgroundColor: subCategory.color || "#000000",
-                      }}
-                      aria-label={`Sub-category color for ${subCategory.name}`}
-                    />
-                    <span className="truncate block max-w-[120px]">
-                      {subCategory.name}
-                    </span>
-
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                      (
-                      {
-                        tasks.filter(
-                          (task) => task.categoryId === subCategory._id
-                        ).length
-                      }{" "}
-                      tasks)
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditCategory(subCategory)}
-                      disabled={isHandling}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-full"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenDeleteDialog(subCategory)}
-                      disabled={isHandling}
-                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-full"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {/* Tasks Section */}
-      {filteredTasks.length > 0 && (
-        <div className="mb-4">
-          <button
-            onClick={() => setIsTasksOpen(!isTasksOpen)}
-            className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white w-full py-2 transition-colors duration-200"
-            aria-expanded={isTasksOpen}
-            aria-controls="tasks"
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenDeleteDialog(category)}
+            disabled={isHandling}
+            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-full"
+            aria-label={`Delete category ${category.name}`}
           >
-            {isTasksOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            Tasks
-          </button>
-          {isTasksOpen && (
-            <ul
-              id="tasks"
-              className="mt-2 space-y-2 pl-4 transition-all duration-300 ease-in-out"
-            >
-              {filteredTasks.map((task) => (
-                <li
-                  key={task._id}
-                  className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700/50 rounded-md p-2"
-                >
-                  <span className="font-medium truncate max-w-[200px] block">
-                    {task.title}
-                  </span>
-
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      task.status === "done"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300"
-                    }`}
-                  >
-                    {task.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+      </div>
 
-      {/* Edit Dialog */}
+      <div className="space-y-2">
+        {subCategories.length > 0 || filteredTasks.length > 0 ? (
+          <>
+            {subCategories.map((subCategory) => {
+              const subTasks = tasks.filter(
+                (task) => task.categoryId === subCategory._id
+              );
+
+              return (
+                <Collapsible key={subCategory._id}>
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center justify-between w-full p-2 px-3 bg-muted/70 hover:bg-muted rounded-lg transition-all">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-4 w-4 rounded-full border border-gray-300 dark:border-zinc-600"
+                          style={{
+                            backgroundColor: subCategory.color || "#000000",
+                          }}
+                        />
+                        <span className="font-medium text-sm truncate max-w-[120px]">
+                          {subCategory.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {subTasks.length} task
+                          {subTasks.length !== 1 ? "s" : ""}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditCategory(subCategory);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-full"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDeleteDialog(subCategory);
+                          }}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-full"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                        <ChevronDown className="h-4 w-4 transition-transform duration-300 data-[state=open]:rotate-180" />
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent className="pl-6 pt-2 space-y-2 border-l border-muted-foreground/10 ml-2">
+                    {subTasks.length > 0 ? (
+                      subTasks.map((task) => (
+                        <TaskCard key={task._id} task={task} />
+                      ))
+                    ) : (
+                      <p className="text-sm italic text-muted-foreground">
+                        No tasks in this sub-category.
+                      </p>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })}
+
+            {filteredTasks.map((task) => (
+              <TaskCard key={task._id} task={task} />
+            ))}
+          </>
+        ) : (
+          <p className="text-xs italic text-muted-foreground">
+            No sub-categories or tasks in this category.
+          </p>
+        )}
+      </div>
 
       <EditCategoryModel
         isCategoryModalOpen={isCategoryModalOpen}
@@ -302,7 +240,6 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
         taskIds={filteredTasks.map((task) => task._id)}
       />
 
-      {/* Delete Confirmation Dialog */}
       {categoryToDelete && (
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
@@ -313,12 +250,10 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                   {categoryToDelete.name}
                 </span>
               </DialogTitle>
-
               <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300 space-y-2 mt-1">
                 <span className="block">
                   Are you sure you want to delete this category?
                 </span>
-
                 {deleteSubCategories.length > 0 && (
                   <span className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed break-words">
                     This will also delete{" "}
@@ -330,7 +265,7 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                           key={c._id}
                           className="italic truncate block text-center max-w-40 md:max-w-60"
                         >
-                          {c.name}{" "}
+                          {c.name}
                           {index !== deleteSubCategories.length - 1 && ","}
                         </span>
                       ))}
@@ -338,7 +273,6 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                     .
                   </span>
                 )}
-
                 {deleteCategoryTasks.length > 0 && (
                   <span className="text-sm text-zinc-500 dark:text-zinc-400">
                     This category and its sub-categories contain{" "}
@@ -349,7 +283,6 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                 )}
               </DialogDescription>
             </DialogHeader>
-
             <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
               {deleteCategoryTasks.length > 0 ? (
                 <>
@@ -363,7 +296,6 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
                   >
                     Delete Tasks
                   </Button>
-
                   <Button
                     variant="outline"
                     onClick={() =>

@@ -9,6 +9,7 @@ import { TaskFormData } from "@/validation/Task";
 import { revalidatePath } from "next/cache";
 import { toPlainObject } from "../lib/utils";
 import { SubTask, TTask } from "@/types/task";
+import { TaskList } from "@/models/TaskList";
 
 const trimTitle = (title: string) =>
   title
@@ -50,6 +51,17 @@ export async function createTask(taskData: TaskFormData) {
       }
     }
 
+    // Validate listId if provided
+    if (taskData.listId) {
+      const list = await TaskList.findOne({
+        _id: taskData.listId,
+        userId: user._id,
+      });
+      if (!list) {
+        return { error: "Invalid list" };
+      }
+    }
+
     // Check for duplicate sub-task titles
     if (taskData.subTasks && taskData.subTasks.length > 0) {
       const subTaskTitles = taskData.subTasks.map((subTask) =>
@@ -70,6 +82,7 @@ export async function createTask(taskData: TaskFormData) {
       userId: user._id,
       subTasks: taskData.subTasks || [],
       categoryId: taskData.categoryId || null,
+      listId: taskData.listId || null,
     });
 
     revalidatePath("/");
@@ -122,6 +135,17 @@ export async function UpdateTask(taskId: string, taskData: TaskFormData) {
       }
     }
 
+    // Validate listId if provided
+    if (taskData.listId) {
+      const list = await TaskList.findOne({
+        _id: taskData.listId,
+        userId: user._id,
+      });
+      if (!list) {
+        return { error: "Invalid list" };
+      }
+    }
+
     // Check for duplicate sub-task titles
     if (taskData.subTasks && taskData.subTasks.length > 0) {
       const subTaskTitles = taskData.subTasks.map((subTask) =>
@@ -143,6 +167,7 @@ export async function UpdateTask(taskId: string, taskData: TaskFormData) {
         title: trimTitle(taskData.title),
         subTasks: taskData.subTasks || [],
         categoryId: taskData.categoryId || null,
+        listId: taskData.listId,
       },
       { new: true, runValidators: true }
     );
@@ -280,15 +305,16 @@ export async function deleteUserTasks() {
     }
 
     await connectDB();
-    const [taskResult, categoryResult] = await Promise.all([
+    const [taskResult, categoryResult, listResult] = await Promise.all([
       Task.deleteMany({ userId: session.user.id }),
       TaskCategory.deleteMany({ userId: session.user.id }), // Delete all user categories
+      TaskList.deleteMany({ userId: session.user.id }), // Delete all user lists
     ]);
 
     revalidatePath("/");
 
     return {
-      success: `Deleted ${taskResult.deletedCount} tasks and ${categoryResult.deletedCount} categories for user.`,
+      success: `Deleted ${taskResult.deletedCount} tasks, ${listResult.deletedCount} lists, and ${categoryResult.deletedCount} categories for user.`,
     };
   } catch (error) {
     console.error("Failed to delete user tasks and categories:", error);

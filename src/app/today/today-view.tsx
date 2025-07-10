@@ -1,7 +1,7 @@
 "use client";
 
+import { TaskCard } from "@/components/tasks/task-card";
 import { useTaskStore } from "@/lib/store";
-import CategoriesTabs from "@/components/categories-tabs";
 
 const TodayView = () => {
   const { tasks } = useTaskStore();
@@ -40,7 +40,9 @@ const TodayView = () => {
           </p>
         </div>
       </div>
-      <CategoriesTabs tasks={todayTasks} />
+      {todayTasks.map((task) => (
+        <TaskCard key={task._id} task={task} />
+      ))}
     </div>
   );
 };

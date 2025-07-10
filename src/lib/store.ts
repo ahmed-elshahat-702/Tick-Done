@@ -4,40 +4,35 @@ import { TTask } from "@/types/task";
 import { TCategory } from "@/types/category";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { TList } from "@/types/list";
 
 interface TaskStore {
   tasks: TTask[];
   categories: TCategory[];
+  lists: TList[];
   isLoading: boolean;
   isHandling: boolean;
   error: string | null;
-  startTime: number | null; // Timestamp in ms
-  endTime: number | null; // Timestamp in ms
-  duration: number; // Duration in seconds
-  isRunning: boolean;
-  isWorkSession: boolean;
-  workDuration: number; // Work duration in minutes
-  breakDuration: number; // Break duration in minutes
+
   setIsLoading: (state: boolean) => void;
   setIsHandling: (state: boolean) => void;
+
   setTasks: (newTasks: TTask[]) => void;
   addTask: (task: TTask) => void;
   editTask: (id: string, data: Partial<TTask>) => Promise<void>;
   removeTask: (id: string) => Promise<void>;
+
   setCategories: (newCategories: TCategory[]) => void;
   addCategory: (category: TCategory) => void;
   updateTasksCategory: (taskIds: string[], categoryId: string | null) => void;
   removeTasksCategory: (taskIds: string[]) => void;
+
+  setLists: (newLists: TList[]) => void;
+  addList: (list: TList) => void;
+  updateTasksList: (taskIds: string[], listId: string | null) => void;
+  removeTasksList: (taskIds: string[]) => void;
+
   clearError: () => void;
-  setTimer: (
-    startTime: number | null,
-    endTime: number | null,
-    duration: number,
-    isRunning: boolean,
-    isWorkSession: boolean
-  ) => void;
-  setDurations: (workDuration: number, breakDuration: number) => void;
-  clearTimer: () => void;
 }
 
 export const useTaskStore = create<TaskStore>()(
@@ -45,16 +40,10 @@ export const useTaskStore = create<TaskStore>()(
     (set) => ({
       tasks: [],
       categories: [],
+      lists: [],
       isLoading: false,
       isHandling: false,
       error: null,
-      startTime: null,
-      endTime: null,
-      duration: 25 * 60,
-      isRunning: false,
-      isWorkSession: true,
-      workDuration: 25,
-      breakDuration: 5,
 
       setIsLoading: (state) => set({ isLoading: state }),
       setIsHandling: (state) => set({ isHandling: state }),
@@ -96,35 +85,32 @@ export const useTaskStore = create<TaskStore>()(
           ),
         })),
 
+      setLists: (newLists) => set({ lists: newLists }),
+      addList: (list) => set((state) => ({ lists: [...state.lists, list] })),
+
+      updateTasksList: (taskIds, listId) =>
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            taskIds.includes(task._id)
+              ? { ...task, listId: listId || undefined }
+              : task
+          ),
+        })),
+
+      removeTasksList: (taskIds) =>
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            taskIds.includes(task._id) ? { ...task, listId: undefined } : task
+          ),
+        })),
+
       clearError: () => set({ error: null }),
-
-      setTimer: (startTime, endTime, duration, isRunning, isWorkSession) =>
-        set({ startTime, endTime, duration, isRunning, isWorkSession }),
-
-      setDurations: (workDuration, breakDuration) =>
-        set({ workDuration, breakDuration }),
-
-      clearTimer: () =>
-        set({
-          startTime: null,
-          endTime: null,
-          duration: 25 * 60,
-          isRunning: false,
-          isWorkSession: true,
-        }),
     }),
     {
       name: "tick-done-storage",
       partialize: (state) => ({
         tasks: state.tasks,
         categories: state.categories,
-        startTime: state.startTime,
-        endTime: state.endTime,
-        duration: state.duration,
-        isRunning: state.isRunning,
-        isWorkSession: state.isWorkSession,
-        workDuration: state.workDuration,
-        breakDuration: state.breakDuration,
       }),
     }
   )
