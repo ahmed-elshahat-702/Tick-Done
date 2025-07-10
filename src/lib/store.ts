@@ -2,9 +2,9 @@
 
 import { TTask } from "@/types/task";
 import { TCategory } from "@/types/category";
+import { TList } from "@/types/list";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { TList } from "@/types/list";
 
 interface TaskStore {
   tasks: TTask[];
@@ -13,6 +13,20 @@ interface TaskStore {
   isLoading: boolean;
   isHandling: boolean;
   error: string | null;
+
+  isRunning: boolean;
+  isWorkSession: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  sessionDuration: number;
+
+  setSession: (isWork: boolean, duration: number) => void;
+  start: () => void;
+  stop: () => void;
+  reset: () => void;
+  setIsRunning: (state: boolean) => void;
+  setIsWorkSession: (state: boolean) => void;
+  setSessionDuration: (duration: number) => void;
 
   setIsLoading: (state: boolean) => void;
   setIsHandling: (state: boolean) => void;
@@ -37,13 +51,48 @@ interface TaskStore {
 
 export const useTaskStore = create<TaskStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       tasks: [],
       categories: [],
       lists: [],
       isLoading: false,
       isHandling: false,
       error: null,
+
+      isRunning: false,
+      isWorkSession: true,
+      startTime: null,
+      endTime: null,
+      sessionDuration: 25 * 60,
+
+      setSession: (isWork, duration) =>
+        set({
+          isWorkSession: isWork,
+          sessionDuration: duration,
+        }),
+
+      start: () => {
+        const now = new Date();
+        const end = new Date(now.getTime() + get().sessionDuration * 1000);
+        set({
+          isRunning: true,
+          startTime: now.toISOString(),
+          endTime: end.toISOString(),
+        });
+      },
+
+      stop: () => set({ isRunning: false }),
+
+      reset: () =>
+        set({
+          isRunning: false,
+          startTime: null,
+          endTime: null,
+        }),
+
+      setIsRunning: (state) => set({ isRunning: state }),
+      setIsWorkSession: (state) => set({ isWorkSession: state }),
+      setSessionDuration: (duration) => set({ sessionDuration: duration }),
 
       setIsLoading: (state) => set({ isLoading: state }),
       setIsHandling: (state) => set({ isHandling: state }),
@@ -111,6 +160,12 @@ export const useTaskStore = create<TaskStore>()(
       partialize: (state) => ({
         tasks: state.tasks,
         categories: state.categories,
+        lists: state.lists,
+        isRunning: state.isRunning,
+        isWorkSession: state.isWorkSession,
+        startTime: state.startTime,
+        endTime: state.endTime,
+        sessionDuration: state.sessionDuration,
       }),
     }
   )

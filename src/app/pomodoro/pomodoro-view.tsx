@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -10,6 +11,7 @@ import {
   sendNotification,
 } from "@/actions/notifications";
 import { Label } from "@/components/ui/label";
+import { useTaskStore } from "@/lib/store";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -23,11 +25,22 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function Pomodoro() {
+  const {
+    isRunning,
+    isWorkSession,
+    endTime,
+    sessionDuration,
+    setSessionDuration,
+    start,
+    stop,
+    reset,
+    setIsRunning,
+    setIsWorkSession,
+  } = useTaskStore();
+
   const [time, setTime] = useState(25 * 60);
-  const [isRunning, setIsRunning] = useState(false);
   const [workDuration, setWorkDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
-  const [isWorkSession, setIsWorkSession] = useState(true);
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(
     null
@@ -36,7 +49,6 @@ export default function Pomodoro() {
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isRunningRef = useRef(isRunning);
-  const [sessionDuration, setSessionDuration] = useState(workDuration * 60);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const sendNotificationCallback = useCallback(
@@ -58,6 +70,74 @@ export default function Pomodoro() {
     [subscription]
   );
 
+  const switchSession = useCallback(
+    (nextIsWorkSession: boolean) => {
+      const nextDuration =
+        (nextIsWorkSession ? workDuration : breakDuration) * 60;
+      setIsWorkSession(nextIsWorkSession);
+      setTime(nextDuration);
+      setSessionDuration(nextDuration);
+    },
+    [workDuration, breakDuration, setIsWorkSession, setSessionDuration]
+  );
+
+  const playAlarm = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((error) => {
+        console.error("Audio playback error:", error);
+      });
+    }
+  }, []);
+
+  const startInterval = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      if (!isRunningRef.current) return;
+      setTime((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          setIsRunning(false);
+          playAlarm();
+
+          setTimeout(() => {
+            if (subscription) {
+              sendNotificationCallback(
+                isWorkSession ? "Work session complete!" : "Break complete!",
+                () => {
+                  switchSession(!isWorkSession);
+                }
+              );
+            } else {
+              switchSession(!isWorkSession);
+            }
+          }, 0);
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [
+    setIsRunning,
+    playAlarm,
+    subscription,
+    sendNotificationCallback,
+    isWorkSession,
+    switchSession,
+  ]);
+
+  useEffect(() => {
+    if (isRunning && endTime) {
+      const remaining = new Date(endTime).getTime() - new Date().getTime();
+      if (remaining <= 0) {
+        reset();
+      } else {
+        setTime(Math.floor(remaining / 1000));
+        startInterval();
+      }
+    }
+  }, [endTime, isRunning, reset, startInterval]);
+
   useEffect(() => {
     isRunningRef.current = isRunning;
   }, [isRunning]);
@@ -68,7 +148,6 @@ export default function Pomodoro() {
       registerServiceWorker();
     }
 
-    // Initialize audio element
     audioRef.current = new Audio("/sounds/alarm.mp3");
 
     return () => {
@@ -148,72 +227,6 @@ export default function Pomodoro() {
     }
   }
 
-  const switchSession = useCallback(
-    (nextIsWorkSession: boolean) => {
-      const nextDuration =
-        (nextIsWorkSession ? workDuration : breakDuration) * 60;
-      setIsWorkSession(nextIsWorkSession);
-      setTime(nextDuration);
-      setSessionDuration(nextDuration);
-    },
-    [workDuration, breakDuration]
-  );
-
-  const playAlarm = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.play().catch((error) => {
-        console.error("Audio playback error:", error);
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isRunning) {
-      if (subscription) {
-        sendNotificationCallback(
-          isWorkSession ? "Work session started!" : "Break started!"
-        );
-      }
-      timerRef.current = setInterval(() => {
-        if (!isRunningRef.current) return;
-        setTime((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            setIsRunning(false);
-            playAlarm();
-
-            setTimeout(() => {
-              if (subscription) {
-                sendNotificationCallback(
-                  isWorkSession ? "Work session complete!" : "Break complete!",
-                  () => {
-                    switchSession(!isWorkSession);
-                  }
-                );
-              } else {
-                switchSession(!isWorkSession);
-              }
-            }, 0);
-
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-  }, [
-    isRunning,
-    isWorkSession,
-    workDuration,
-    breakDuration,
-    sendNotificationCallback,
-    subscription,
-    switchSession,
-    playAlarm,
-  ]);
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -222,16 +235,22 @@ export default function Pomodoro() {
       .padStart(2, "0")}`;
   };
 
-  const handleStartPause = () => setIsRunning(!isRunning);
+  const handleStartPause = () => {
+    if (isRunning) {
+      stop();
+    } else {
+      start();
+    }
+  };
 
   const handleReset = useCallback(() => {
-    setIsRunning(false);
+    reset();
     setIsWorkSession(true);
     const seconds = workDuration * 60;
     setTime(seconds);
     setSessionDuration(seconds);
     if (audioRef.current) audioRef.current.pause();
-  }, [workDuration]);
+  }, [reset, setIsWorkSession, workDuration, setSessionDuration]);
 
   const handleWorkDurationChange = useCallback(
     ([value]: number[]) => {
@@ -242,7 +261,7 @@ export default function Pomodoro() {
         setSessionDuration(seconds);
       }
     },
-    [isWorkSession, isRunning]
+    [isWorkSession, isRunning, setSessionDuration]
   );
 
   const handleBreakDurationChange = useCallback(
@@ -254,7 +273,7 @@ export default function Pomodoro() {
         setSessionDuration(seconds);
       }
     },
-    [isWorkSession, isRunning]
+    [isWorkSession, isRunning, setSessionDuration]
   );
 
   const progress = ((sessionDuration - time) / sessionDuration) * 100;
@@ -295,7 +314,6 @@ export default function Pomodoro() {
           </div>
         )}
 
-        {/* Timer with animated progress ring */}
         <div className="relative flex justify-center items-center">
           <div className="relative w-48 h-48">
             <svg className="w-full h-full" viewBox="0 0 160 160">
@@ -336,7 +354,6 @@ export default function Pomodoro() {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex justify-center gap-3">
           <Button
             onClick={handleStartPause}
@@ -368,7 +385,6 @@ export default function Pomodoro() {
           </Button>
         </div>
 
-        {/* Sliders */}
         <div className="space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
