@@ -12,6 +12,7 @@ import {
 } from "@/actions/notifications";
 import { Label } from "@/components/ui/label";
 import { useTaskStore } from "@/lib/store";
+import { toast } from "sonner";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -53,18 +54,21 @@ export default function Pomodoro() {
 
   const sendNotificationCallback = useCallback(
     async (message: string, onSuccess?: () => void) => {
-      if (!subscription) return;
+      if (!subscription) {
+        if (onSuccess) onSuccess();
+        return;
+      }
       try {
         const result = await sendNotification(message);
         if (result.error) {
           setError(result.error);
-        } else if (onSuccess) {
+        } else {
           setError(null);
-          onSuccess();
+          if (onSuccess) onSuccess();
         }
       } catch (error) {
-        setError("Notification error");
         console.error("Notification error:", error);
+        setError("Failed to send notification");
       }
     },
     [subscription]
@@ -98,20 +102,10 @@ export default function Pomodoro() {
           clearInterval(timerRef.current!);
           setIsRunning(false);
           playAlarm();
-
-          setTimeout(() => {
-            if (subscription) {
-              sendNotificationCallback(
-                isWorkSession ? "Work session complete!" : "Break complete!",
-                () => {
-                  switchSession(!isWorkSession);
-                }
-              );
-            } else {
-              switchSession(!isWorkSession);
-            }
-          }, 0);
-
+          sendNotificationCallback(
+            isWorkSession ? "Work session complete!" : "Break complete!",
+            () => switchSession(!isWorkSession)
+          );
           return 0;
         }
         return prev - 1;
@@ -120,23 +114,36 @@ export default function Pomodoro() {
   }, [
     setIsRunning,
     playAlarm,
-    subscription,
-    sendNotificationCallback,
     isWorkSession,
+    sendNotificationCallback,
     switchSession,
   ]);
 
   useEffect(() => {
     if (isRunning && endTime) {
-      const remaining = new Date(endTime).getTime() - new Date().getTime();
+      const remaining = Math.floor(
+        (new Date(endTime).getTime() - new Date().getTime()) / 1000
+      );
       if (remaining <= 0) {
         reset();
+        sendNotificationCallback(
+          isWorkSession ? "Work session complete!" : "Break complete!",
+          () => switchSession(!isWorkSession)
+        );
       } else {
-        setTime(Math.floor(remaining / 1000));
+        setTime(remaining);
         startInterval();
       }
     }
-  }, [endTime, isRunning, reset, startInterval]);
+  }, [
+    endTime,
+    isRunning,
+    reset,
+    startInterval,
+    isWorkSession,
+    sendNotificationCallback,
+    switchSession,
+  ]);
 
   useEffect(() => {
     isRunningRef.current = isRunning;
@@ -147,9 +154,7 @@ export default function Pomodoro() {
       setIsSupported(true);
       registerServiceWorker();
     }
-
     audioRef.current = new Audio("/sounds/alarm.mp3");
-
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (audioRef.current) audioRef.current.pause();
@@ -173,8 +178,8 @@ export default function Pomodoro() {
         }
       }
     } catch (error) {
+      console.error("Service worker registration error:", error);
       setError("Failed to register service worker");
-      console.error("Service worker error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -183,6 +188,11 @@ export default function Pomodoro() {
   async function subscribeToPush() {
     setIsLoading(true);
     try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setError("Notification permission denied");
+        return;
+      }
       const registration = await navigator.serviceWorker.ready;
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -196,11 +206,12 @@ export default function Pomodoro() {
         setError(result.error);
         setSubscription(null);
       } else {
+        toast.success("Notifications turned on.");
         setError(null);
       }
     } catch (error) {
-      setError("Failed to subscribe to notifications");
       console.error("Subscription error:", error);
+      setError("Failed to subscribe to notifications");
     } finally {
       setIsLoading(false);
     }
@@ -215,13 +226,14 @@ export default function Pomodoro() {
         if (result.error) {
           setError(result.error);
         } else {
+          toast.success("Notifications turned of.");
           setSubscription(null);
           setError(null);
         }
       }
     } catch (error) {
-      setError("Failed to unsubscribe");
       console.error("Unsubscription error:", error);
+      setError("Failed to unsubscribe");
     } finally {
       setIsLoading(false);
     }
@@ -240,6 +252,11 @@ export default function Pomodoro() {
       stop();
     } else {
       start();
+      if (subscription) {
+        sendNotificationCallback(
+          isWorkSession ? "Work session started!" : "Break started!"
+        );
+      }
     }
   };
 
@@ -402,7 +419,7 @@ export default function Pomodoro() {
               id="work-duration"
               value={[workDuration]}
               onValueChange={handleWorkDurationChange}
-              min={15}
+              min={5}
               max={90}
               step={5}
               disabled={isRunning || isLoading}
