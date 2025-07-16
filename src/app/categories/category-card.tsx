@@ -1,7 +1,13 @@
 "use client";
 
 import { deleteTaskCategory } from "@/actions/task-categories";
+import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -15,13 +21,7 @@ import { TCategory } from "@/types/category";
 import { ChevronDown, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import EditCategoryModel from "./edit-category-model";
-import { TaskCard } from "@/components/tasks/task-card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { CategoryModal } from "./category-modal";
 
 interface CategoryCardProps {
   category: TCategory;
@@ -39,12 +39,8 @@ const CategoryCard = ({
     null
   );
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<TCategory | null>(
-    null
-  );
 
-  const handleEditCategory = (category: TCategory) => {
-    setEditingCategory(category);
+  const handleEditCategory = () => {
     setIsCategoryModalOpen(true);
   };
 
@@ -131,7 +127,7 @@ const CategoryCard = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleEditCategory(category)}
+            onClick={() => handleEditCategory()}
             disabled={isHandling}
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-full"
             aria-label={`Edit category ${category.name}`}
@@ -184,7 +180,7 @@ const CategoryCard = ({
                           size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEditCategory(subCategory);
+                            handleEditCategory();
                           }}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-full"
                         >
@@ -232,12 +228,10 @@ const CategoryCard = ({
         )}
       </div>
 
-      <EditCategoryModel
-        isCategoryModalOpen={isCategoryModalOpen}
-        editingCategory={editingCategory}
-        setIsCategoryModalOpen={setIsCategoryModalOpen}
-        setEditingCategory={setEditingCategory}
-        taskIds={filteredTasks.map((task) => task._id)}
+      <CategoryModal
+        open={isCategoryModalOpen}
+        onOpenChange={setIsCategoryModalOpen}
+        category={category}
       />
 
       {categoryToDelete && (

@@ -7,7 +7,6 @@ import { TTask } from "@/types/task";
 import { Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import EditListModel from "./edit-list-modal";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ListModal } from "./list-modal";
 
 type Props = {
   list: TList;
@@ -86,8 +86,6 @@ const TaskListCard = ({ list, tasks, setSelectedListId }: Props) => {
     }
   };
 
-  const filteredTasks = listTasks;
-
   const deleteListTasks = listToDelete
     ? tasks.filter((task) => task.listId === listToDelete._id)
     : [];
@@ -137,12 +135,10 @@ const TaskListCard = ({ list, tasks, setSelectedListId }: Props) => {
         )}
       </div>
 
-      <EditListModel
-        isListModalOpen={isListModalOpen}
-        editingList={editingList}
-        setIsListModalOpen={setIsListModalOpen}
-        setEditingList={setEditingList}
-        taskIds={filteredTasks.map((task) => task._id)}
+      <ListModal
+        open={isListModalOpen}
+        onOpenChange={setIsListModalOpen}
+        list={editingList}
       />
 
       {listToDelete && (

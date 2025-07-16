@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UpdateTask } from "@/actions/tasks";
+import { createTask, UpdateTask } from "@/actions/tasks";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,20 +43,16 @@ import { CalendarIcon, Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/ui/badge";
 
-interface EditTaskModalProps {
+interface TaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task: TTask;
+  task?: TTask | null;
 }
 
-export function EditTaskModal({
-  open,
-  onOpenChange,
-  task,
-}: EditTaskModalProps) {
-  const { editTask, isHandling, setIsHandling, categories, lists } =
+export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
+  const { addTask, editTask, isHandling, setIsHandling, categories, lists } =
     useTaskStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
@@ -67,18 +63,17 @@ export function EditTaskModal({
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      priority: task?.priority || "medium",
-      dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
-      tag: task?.tag || "",
-      subTasks: task?.subTasks || [],
-      categoryId: task?.categoryId ?? null,
-      listId: task?.listId || myTasksListId || "",
+      title: "",
+      description: "",
+      priority: "medium",
+      dueDate: undefined,
+      tag: "",
+      subTasks: [],
+      categoryId: null,
+      listId: myTasksListId || "",
     },
   });
 
-  // Reset form when task changes (for editing)
   useEffect(() => {
     if (task) {
       form.reset({
@@ -101,7 +96,7 @@ export function EditTaskModal({
         tag: "",
         subTasks: [],
         categoryId: null,
-        listId: "",
+        listId: myTasksListId || "",
       });
       setSubTasks([]);
     }
@@ -109,20 +104,18 @@ export function EditTaskModal({
 
   const addSubTask = () => {
     if (!newSubTaskTitle.trim()) {
-      toast("Sub-task title cannot be empty.");
+      toast.error("Sub-task title cannot be empty.");
       return;
     }
-
     if (
       subTasks.some(
         (subTask) =>
           subTask.title.toLowerCase() === newSubTaskTitle.trim().toLowerCase()
       )
     ) {
-      toast("A sub-task with this title already exists.");
+      toast.error("A sub-task with this title already exists.");
       return;
     }
-
     const newSubTask: SubTask = {
       _id: uuidv4(),
       title: newSubTaskTitle.trim(),
@@ -141,65 +134,62 @@ export function EditTaskModal({
 
   const onSubmit = async (data: TaskFormData) => {
     try {
+      setIsHandling(true);
       const taskData = { ...data, subTasks: data.subTasks || [] };
-      try {
-        setIsHandling(true);
-        const res = await UpdateTask(task._id, taskData);
+      let res;
+      if (task) {
+        res = await UpdateTask(task._id, taskData);
         if (res?.error) {
-          toast(res.error);
+          toast.error(res.error);
+          return;
         }
         if (res?.success && res?.task) {
           await editTask(task._id, res.task);
-          toast(res.success);
-          form.reset({
-            title: res?.task?.title || "",
-            description: res?.task?.description || "",
-            priority: res?.task?.priority || "medium",
-            dueDate: res?.task?.dueDate
-              ? new Date(res?.task.dueDate)
-              : undefined,
-            tag: res?.task?.tag || "",
-            subTasks: res?.task?.subTasks || [],
-            categoryId: res?.task?.categoryId ?? null,
-            listId: task.listId || myTasksListId || "",
-          });
+          toast.success(res.success);
         }
-      } catch (error) {
-        console.error("Failed to update task:", error);
-        toast("Failed to update task");
-      } finally {
-        setIsHandling(false);
+      } else {
+        res = await createTask(taskData);
+        if (res?.error) {
+          toast.error(res.error);
+          return;
+        }
+        if (res?.success && res?.task) {
+          addTask(res.task);
+          toast.success(res.success);
+        }
       }
       form.reset({
-        title: task.title,
-        description: task.description || "",
-        priority: task.priority || "medium",
-        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-        tag: task.tag || "",
-        subTasks: task.subTasks || [],
-        categoryId: task.categoryId ?? null,
-        listId: task.listId || myTasksListId || "",
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: undefined,
+        tag: "",
+        subTasks: [],
+        categoryId: null,
+        listId: myTasksListId || "",
       });
       setSubTasks([]);
       setNewSubTaskTitle("");
       onOpenChange(false);
     } catch (error) {
-      toast(`Something went wrong. Please try again.`);
+      toast.error("Something went wrong. Please try again.");
       console.error(error);
+    } finally {
+      setIsHandling(false);
     }
   };
 
   const handleClose = () => {
     if (!isHandling) {
       form.reset({
-        title: task.title,
-        description: task.description || "",
-        priority: task.priority || "medium",
-        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-        tag: task.tag || "",
-        subTasks: task.subTasks || [],
-        categoryId: task.categoryId ?? null,
-        listId: task.listId || myTasksListId || "",
+        title: task?.title || "",
+        description: task?.description || "",
+        priority: task?.priority || "medium",
+        dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
+        tag: task?.tag || "",
+        subTasks: task?.subTasks || [],
+        categoryId: task?.categoryId ?? null,
+        listId: task?.listId || myTasksListId || "",
       });
       setSubTasks(task?.subTasks || []);
       setNewSubTaskTitle("");
@@ -209,11 +199,10 @@ export function EditTaskModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[calc(100vh-12rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Task</DialogTitle>
+          <DialogTitle>{task ? "Edit Task" : "Add New Task"}</DialogTitle>
         </DialogHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -233,7 +222,6 @@ export function EditTaskModal({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="description"
@@ -253,7 +241,6 @@ export function EditTaskModal({
                 </FormItem>
               )}
             />
-
             <FormItem>
               <FormLabel>Sub-tasks</FormLabel>
               <div className="flex gap-2">
@@ -285,7 +272,6 @@ export function EditTaskModal({
                       <span className="text-sm text-foreground break-all">
                         {subTask.title}
                       </span>
-
                       <Button
                         type="button"
                         variant="ghost"
@@ -301,7 +287,6 @@ export function EditTaskModal({
                 </div>
               )}
             </FormItem>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -329,7 +314,6 @@ export function EditTaskModal({
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="dueDate"
@@ -407,7 +391,6 @@ export function EditTaskModal({
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="listId"
@@ -416,8 +399,7 @@ export function EditTaskModal({
                     <FormLabel>List</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(value)}
-                      defaultValue={task.listId}
-                      value={field.value}
+                      defaultValue={field.value}
                       disabled={isHandling}
                     >
                       <FormControl>
@@ -427,12 +409,12 @@ export function EditTaskModal({
                       </FormControl>
                       <SelectContent>
                         {myTasksListId && (
-                          <SelectItem value={myTasksListId!}>
+                          <SelectItem value={myTasksListId}>
                             My Tasks
                           </SelectItem>
                         )}
                         {lists
-                          .filter((list) => list.name !== "My Tasks") // avoid duplication
+                          .filter((list) => list.name !== "My Tasks")
                           .map((list) => (
                             <SelectItem
                               key={list._id}
@@ -451,7 +433,6 @@ export function EditTaskModal({
                 )}
               />
             </div>
-
             <FormField
               control={form.control}
               name="tag"
@@ -469,7 +450,6 @@ export function EditTaskModal({
                 </FormItem>
               )}
             />
-
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
               <Button
                 type="button"
@@ -488,10 +468,12 @@ export function EditTaskModal({
                 {isHandling ? (
                   <>
                     <LoadingSpinner className="mr-2 h-4 w-4" />
-                    Updating...
+                    {task ? "Updating..." : "Adding..."}
                   </>
-                ) : (
+                ) : task ? (
                   "Update Task"
+                ) : (
+                  "Add Task"
                 )}
               </Button>
             </div>

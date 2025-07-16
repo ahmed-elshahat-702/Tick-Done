@@ -1,6 +1,10 @@
 "use client";
 
-import { updateTaskCategory } from "@/actions/task-categories";
+import { useState, useEffect } from "react";
+import {
+  createTaskCategory,
+  updateTaskCategory,
+} from "@/actions/task-categories";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +22,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -26,30 +29,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { useTaskStore } from "@/lib/store";
 import { TCategory } from "@/types/category";
 import { CategoryFormData, categorySchema } from "@/validation/Category";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-interface EditCategoryModelProps {
-  isCategoryModalOpen: boolean;
-  editingCategory: TCategory | null;
-  setIsCategoryModalOpen: (open: boolean) => void;
-  setEditingCategory: (category: TCategory | null) => void;
-  taskIds: string[];
+interface CategoryModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  category?: TCategory | null;
 }
 
-const EditCategoryModel = ({
-  isCategoryModalOpen,
-  editingCategory,
-  setIsCategoryModalOpen,
-  setEditingCategory,
-  taskIds,
-}: EditCategoryModelProps) => {
-  const { categories, tasks, setCategories } = useTaskStore();
+export function CategoryModal({
+  open,
+  onOpenChange,
+  category,
+}: CategoryModalProps) {
+  const {
+    addCategory,
+    setCategories,
+    tasks,
+    categories,
+    updateTasksCategory,
+    removeTasksCategory,
+  } = useTaskStore();
   const [isHandling, setIsHandling] = useState(false);
 
   const form = useForm<CategoryFormData>({
@@ -62,14 +68,16 @@ const EditCategoryModel = ({
     },
   });
 
-  // Reset form when editingCategory changes
   useEffect(() => {
-    if (editingCategory) {
+    if (category) {
       form.reset({
-        name: editingCategory.name || "",
-        parentId: editingCategory.parentId || null,
-        color: editingCategory.color || "#000000",
-        taskIds: taskIds || [],
+        name: category.name || "",
+        parentId: category.parentId || null,
+        color: category.color || "#000000",
+        taskIds:
+          tasks
+            .filter((task) => task.categoryId === category._id)
+            .map((task) => task._id) || [],
       });
     } else {
       form.reset({
@@ -79,97 +87,88 @@ const EditCategoryModel = ({
         taskIds: [],
       });
     }
-  }, [editingCategory, taskIds, form]);
+  }, [category, form, tasks]);
 
-  const onCategorySubmit = async (data: CategoryFormData) => {
-    if (!editingCategory) {
-      toast.error("No category selected for editing.");
-      return;
-    }
+  const onSubmit = async (data: CategoryFormData) => {
     try {
       setIsHandling(true);
-
-      // Get current tasks assigned to this category
-      const currentTaskIds = tasks
-        .filter((task) => task.categoryId === editingCategory._id)
-        .map((task) => task._id);
-
-      // Get new task IDs from form
-      const newTaskIds = data.taskIds || [];
-
-      // Update the category
-      const res = await updateTaskCategory(editingCategory._id, {
-        ...data,
-        taskIds: newTaskIds,
-      });
-
-      if (res?.success && res?.category) {
-        // Update category in store
-        setCategories(
-          categories.map((c) =>
-            c._id === editingCategory._id ? res.category : c
-          )
-        );
-
-        // Get store actions
-        const { updateTasksCategory, removeTasksCategory } =
-          useTaskStore.getState();
-
-        // Find tasks that were added
-        const tasksToAdd = newTaskIds.filter(
-          (id) => !currentTaskIds.includes(id)
-        );
-        // Find tasks that were removed
-        const tasksToRemove = currentTaskIds.filter(
-          (id) => !newTaskIds.includes(id)
-        );
-
-        // Update tasks in store
-        if (tasksToAdd.length > 0) {
-          updateTasksCategory(tasksToAdd, res.category._id);
+      if (category) {
+        const currentTaskIds = tasks
+          .filter((task) => task.categoryId === category._id)
+          .map((task) => task._id);
+        const newTaskIds = data.taskIds || [];
+        const res = await updateTaskCategory(category._id, {
+          ...data,
+          taskIds: newTaskIds,
+        });
+        if (res?.success && res?.category) {
+          setCategories(
+            categories.map((c) => (c._id === category._id ? res.category : c))
+          );
+          const tasksToAdd = newTaskIds.filter(
+            (id) => !currentTaskIds.includes(id)
+          );
+          const tasksToRemove = currentTaskIds.filter(
+            (id) => !newTaskIds.includes(id)
+          );
+          if (tasksToAdd.length > 0) {
+            updateTasksCategory(tasksToAdd, res.category._id);
+          }
+          if (tasksToRemove.length > 0) {
+            removeTasksCategory(tasksToRemove);
+          }
+          toast.success(res.success);
+        } else {
+          toast.error(res?.error || "Update failed");
         }
-        if (tasksToRemove.length > 0) {
-          removeTasksCategory(tasksToRemove);
-        }
-
-        toast.success(res.success);
       } else {
-        toast.error(res?.error || "Update failed");
+        const res = await createTaskCategory(data);
+        if (res?.success && res?.category) {
+          addCategory(res.category);
+          if (data.taskIds) {
+            updateTasksCategory(data.taskIds, res.category._id);
+          }
+          toast.success(res.success);
+        } else {
+          toast.error(res?.error || "Failed to create category");
+        }
       }
-
-      setIsCategoryModalOpen(false);
-      setEditingCategory(null);
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      console.error(error);
       toast.error("Something went wrong. Please try again.");
+      console.error(error);
     } finally {
       setIsHandling(false);
     }
   };
 
+  const handleClose = () => {
+    if (!isHandling) {
+      form.reset({
+        name: category?.name || "",
+        parentId: category?.parentId || null,
+        color: category?.color || "#000000",
+        taskIds: category
+          ? tasks
+              .filter((task) => task.categoryId === category._id)
+              .map((task) => task._id) || []
+          : [],
+      });
+      onOpenChange(false);
+    }
+  };
+
   return (
-    <Dialog
-      open={isCategoryModalOpen}
-      onOpenChange={(open) => {
-        setIsCategoryModalOpen(open);
-        if (!open) {
-          form.reset();
-          setEditingCategory(null);
-        }
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md max-h-[calc(100vh-12rem)] md:max-h-[calc(100vh-4rem)]  overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Edit Category
+          <DialogTitle>
+            {category ? "Edit Category" : "New Category"}
           </DialogTitle>
         </DialogHeader>
-
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onCategorySubmit)}
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -187,7 +186,6 @@ const EditCategoryModel = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="parentId"
@@ -206,19 +204,16 @@ const EditCategoryModel = ({
                         <SelectValue placeholder="Select parent category..." />
                       </SelectTrigger>
                     </FormControl>
-
                     <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[--radix-select-content-available-height]">
                       <SelectItem value="none" className="text-sm">
                         <span className="truncate">
                           None (Top-level category)
                         </span>
                       </SelectItem>
-
                       {categories
                         .filter(
                           (c) =>
-                            (!editingCategory ||
-                              c._id !== editingCategory._id) &&
+                            (!category || c._id !== category._id) &&
                             (!c.parentId || c.parentId === null)
                         )
                         .map((cat) => (
@@ -238,7 +233,6 @@ const EditCategoryModel = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="taskIds"
@@ -250,9 +244,8 @@ const EditCategoryModel = ({
                       options={tasks
                         .filter(
                           (task) =>
-                            !task.categoryId || // Tasks with no category
-                            (editingCategory &&
-                              task.categoryId === editingCategory._id) // Tasks assigned to the current editing category
+                            !task.categoryId ||
+                            (category && task.categoryId === category._id)
                         )
                         .map((task) => ({
                           value: task._id,
@@ -276,7 +269,6 @@ const EditCategoryModel = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="color"
@@ -300,15 +292,11 @@ const EditCategoryModel = ({
                 </FormItem>
               )}
             />
-
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setIsCategoryModalOpen(false);
-                  setEditingCategory(null);
-                }}
+                onClick={handleClose}
                 disabled={isHandling}
               >
                 Cancel
@@ -317,10 +305,12 @@ const EditCategoryModel = ({
                 {isHandling ? (
                   <>
                     <LoadingSpinner className="mr-2 h-4 w-4" />
-                    Updating...
+                    {category ? "Updating..." : "Adding..."}
                   </>
-                ) : (
+                ) : category ? (
                   "Update"
+                ) : (
+                  "Add"
                 )}
               </Button>
             </div>
@@ -329,6 +319,4 @@ const EditCategoryModel = ({
       </DialogContent>
     </Dialog>
   );
-};
-
-export default EditCategoryModel;
+}

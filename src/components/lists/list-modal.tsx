@@ -1,6 +1,7 @@
 "use client";
 
-import { updateTaskList } from "@/actions/task-lists";
+import { useState, useEffect } from "react";
+import { createTaskList, updateTaskList } from "@/actions/task-lists";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,31 +20,21 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { MultiSelect } from "@/components/ui/multi-select";
-
 import { useTaskStore } from "@/lib/store";
 import { TList } from "@/types/list";
 import { TaskListFormData, taskListSchema } from "@/validation/List";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-interface EditListModelProps {
-  isListModalOpen: boolean;
-  editingList: TList | null;
-  setIsListModalOpen: (open: boolean) => void;
-  setEditingList: (list: TList | null) => void;
-  taskIds: string[];
+interface ListModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  list?: TList | null;
 }
 
-const EditListModel = ({
-  isListModalOpen,
-  editingList,
-  setIsListModalOpen,
-  setEditingList,
-  taskIds,
-}: EditListModelProps) => {
-  const { lists, tasks, setLists } = useTaskStore();
+export function ListModal({ open, onOpenChange, list }: ListModalProps) {
+  const { addList, setLists, tasks, lists, updateTasksList } = useTaskStore();
   const [isHandling, setIsHandling] = useState(false);
 
   const myTasksList = lists.find((l) => l.name === "My Tasks");
@@ -63,14 +54,16 @@ const EditListModel = ({
     },
   });
 
-  // Reset form when editingList changes
   useEffect(() => {
-    if (editingList) {
+    if (list) {
       form.reset({
-        name: editingList.name || "",
-        description: editingList.description || "",
-        color: editingList.color || "#000000",
-        taskIds: taskIds || [],
+        name: list.name || "",
+        description: list.description || "",
+        color: list.color || "#000000",
+        taskIds:
+          tasks
+            .filter((task) => task.listId === list._id)
+            .map((task) => task._id) || [],
       });
     } else {
       form.reset({
@@ -80,93 +73,84 @@ const EditListModel = ({
         taskIds: [],
       });
     }
-  }, [editingList, taskIds, form]);
+  }, [list, form, tasks]);
 
-  const onListSubmit = async (data: TaskListFormData) => {
-    if (!editingList) {
-      toast.error("No list selected for editing.");
-      return;
-    }
+  const onSubmit = async (data: TaskListFormData) => {
     try {
       setIsHandling(true);
-
-      // Get current tasks assigned to this list
-      const currentTaskIds = tasks
-        .filter((task) => task.listId === editingList._id)
-        .map((task) => task._id);
-
-      // Get new task IDs from form
-      const newTaskIds = data.taskIds || [];
-
-      // Update the list
-      const res = await updateTaskList(editingList._id, {
-        ...data,
-        taskIds: newTaskIds,
-      });
-
-      if (res?.success && res?.taskList) {
-        // Update list in store
-        setLists(
-          lists.map((c) => (c._id === editingList._id ? res.taskList : c))
-        );
-
-        // Get store actions
-        const { updateTasksList } = useTaskStore.getState();
-
-        // Find tasks that were added
-        const tasksToAdd = newTaskIds.filter(
-          (id) => !currentTaskIds.includes(id)
-        );
-        // Find tasks that were removed
-        const tasksToRemove = currentTaskIds.filter(
-          (id) => !newTaskIds.includes(id)
-        );
-
-        // Update tasks in store
-        if (tasksToAdd.length > 0) {
-          updateTasksList(tasksToAdd, res.taskList._id);
+      if (list) {
+        const currentTaskIds = tasks
+          .filter((task) => task.listId === list._id)
+          .map((task) => task._id);
+        const newTaskIds = data.taskIds || [];
+        const res = await updateTaskList(list._id, {
+          ...data,
+          taskIds: newTaskIds,
+        });
+        if (res?.success && res?.taskList) {
+          setLists(lists.map((c) => (c._id === list._id ? res.taskList : c)));
+          const tasksToAdd = newTaskIds.filter(
+            (id) => !currentTaskIds.includes(id)
+          );
+          const tasksToRemove = currentTaskIds.filter(
+            (id) => !newTaskIds.includes(id)
+          );
+          if (tasksToAdd.length > 0) {
+            updateTasksList(tasksToAdd, res.taskList._id);
+          }
+          if (tasksToRemove.length > 0 && myTasksListId) {
+            updateTasksList(tasksToRemove, myTasksListId);
+          }
+          toast.success(res.success);
+        } else {
+          toast.error(res?.error || "Update failed");
         }
-        if (tasksToRemove.length > 0 && myTasksListId) {
-          updateTasksList(tasksToRemove, myTasksListId);
-        }
-
-        toast.success(res.success);
       } else {
-        toast.error(res?.error || "Update failed");
+        const res = await createTaskList(data);
+        if (res?.success && res?.taskList) {
+          addList(res.taskList);
+          if (data.taskIds) {
+            updateTasksList(data.taskIds, res.taskList._id);
+          }
+          toast.success(res.success);
+        } else {
+          toast.error(res?.error || "Failed to create list");
+        }
       }
-
       form.reset();
-      setIsListModalOpen(false);
-      setEditingList(null);
+      onOpenChange(false);
     } catch (error) {
-      console.error(error);
       toast.error("Something went wrong. Please try again.");
+      console.error(error);
     } finally {
       setIsHandling(false);
     }
   };
 
-  return (
-    <Dialog
-      open={isListModalOpen}
-      onOpenChange={(open) => {
-        setIsListModalOpen(open);
-        if (!open) {
-          form.reset();
-          setEditingList(null);
-        }
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Edit List</DialogTitle>
-        </DialogHeader>
+  const handleClose = () => {
+    if (!isHandling) {
+      form.reset({
+        name: list?.name || "",
+        description: list?.description || "",
+        color: list?.color || "#000000",
+        taskIds: list
+          ? tasks
+              .filter((task) => task.listId === list._id)
+              .map((task) => task._id) || []
+          : [],
+      });
+      onOpenChange(false);
+    }
+  };
 
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md max-h-[calc(100vh-12rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{list ? "Edit List" : "New Task List"}</DialogTitle>
+        </DialogHeader>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onListSubmit)}
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -184,7 +168,6 @@ const EditListModel = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="description"
@@ -202,7 +185,6 @@ const EditListModel = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="taskIds"
@@ -233,7 +215,6 @@ const EditListModel = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="color"
@@ -257,15 +238,11 @@ const EditListModel = ({
                 </FormItem>
               )}
             />
-
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setIsListModalOpen(false);
-                  setEditingList(null);
-                }}
+                onClick={handleClose}
                 disabled={isHandling}
               >
                 Cancel
@@ -274,10 +251,12 @@ const EditListModel = ({
                 {isHandling ? (
                   <>
                     <LoadingSpinner className="mr-2 h-4 w-4" />
-                    Updating...
+                    {list ? "Updating..." : "Adding..."}
                   </>
-                ) : (
+                ) : list ? (
                   "Update"
+                ) : (
+                  "Add"
                 )}
               </Button>
             </div>
@@ -286,6 +265,4 @@ const EditListModel = ({
       </DialogContent>
     </Dialog>
   );
-};
-
-export default EditListModel;
+}

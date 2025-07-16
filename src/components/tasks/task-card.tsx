@@ -5,7 +5,6 @@ import {
   updateSubTaskStatus,
   updateTaskStatus,
 } from "@/actions/tasks";
-import { EditTaskModal } from "@/components/tasks/edit-task-modal";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +31,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { TaskModal } from "./task-modal";
 
 const priorityColors = {
   low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
@@ -317,11 +317,7 @@ export function TaskCard({ task }: { task: TTask }) {
         </CardContent>
       </Card>
 
-      <EditTaskModal
-        open={isEditOpen}
-        onOpenChange={setIsEditOpen}
-        task={task}
-      />
+      <TaskModal open={isEditOpen} onOpenChange={setIsEditOpen} task={task} />
     </>
   );
 }
