@@ -2,6 +2,7 @@
 
 import { TTask } from "@/types/task";
 import { TCategory } from "@/types/category";
+import { StickyNote as TStickyNote } from "@/types/notes";
 import { TList } from "@/types/list";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -10,6 +11,7 @@ interface TaskStore {
   tasks: TTask[];
   categories: TCategory[];
   lists: TList[];
+  stickyNotes: TStickyNote[];
   isLoading: boolean;
   isHandling: boolean;
   error: string | null;
@@ -46,6 +48,14 @@ interface TaskStore {
   updateTasksList: (taskIds: string[], listId: string | null) => void;
   removeTasksList: (taskIds: string[]) => void;
 
+  setStickyNotes: (newStickyNotes: TStickyNote[]) => void;
+  addStickyNote: (stickyNote: TStickyNote) => void;
+  updateStickyNote: (
+    stickyNoteId: string,
+    data: Partial<TStickyNote>
+  ) => Promise<void>;
+  removeStickyNote: (stickyNoteId: string) => void;
+
   clearError: () => void;
 }
 
@@ -55,6 +65,7 @@ export const useTaskStore = create<TaskStore>()(
       tasks: [],
       categories: [],
       lists: [],
+      stickyNotes: [],
       isLoading: false,
       isHandling: false,
       error: null,
@@ -150,6 +161,26 @@ export const useTaskStore = create<TaskStore>()(
         set((state) => ({
           tasks: state.tasks.map((task) =>
             taskIds.includes(task._id) ? { ...task, listId: undefined } : task
+          ),
+        })),
+
+      setStickyNotes: (newStickyNotes) => set({ stickyNotes: newStickyNotes }),
+      addStickyNote: (stickyNote) =>
+        set((state) => ({ stickyNotes: [...state.stickyNotes, stickyNote] })),
+
+      updateStickyNote: async (stickyNoteId, data) =>
+        set((state) => ({
+          stickyNotes: state.stickyNotes.map((note) =>
+            note._id === stickyNoteId
+              ? { ...note, ...data, updatedAt: new Date() }
+              : note
+          ),
+        })),
+
+      removeStickyNote: (stickyNoteId) =>
+        set((state) => ({
+          stickyNotes: state.stickyNotes.filter(
+            (note) => note._id !== stickyNoteId
           ),
         })),
 

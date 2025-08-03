@@ -7,15 +7,9 @@ import { User } from "@/models/User";
 import { TaskCategory } from "@/models/TaskCategory";
 import { TaskFormData } from "@/validation/Task";
 import { revalidatePath } from "next/cache";
-import { toPlainObject } from "../lib/utils";
+import { toPlainObject, trimTitle } from "../lib/utils";
 import { SubTask, TTask } from "@/types/task";
 import { TaskList } from "@/models/TaskList";
-
-const trimTitle = (title: string) =>
-  title
-    .replace(/^\s+/, "") // Trim Leading spaces
-    .replace(/\s{2,}/g, " ") // Replace multiple spaces with one
-    .trim(); // Trim trailing spaces
 
 export async function createTask(taskData: TaskFormData) {
   try {

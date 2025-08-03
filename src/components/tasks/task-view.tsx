@@ -35,7 +35,7 @@ export function TaskView() {
           <h2 className="text-2xl font-bold tracking-tight">My Tasks</h2>
           <p className="text-muted-foreground">
             {tasks.length}
-            {tasks.length === 1 ? "task" : "tasks"}
+            {tasks.length === 1 ? " task" : " tasks"}
           </p>
         </div>
       </div>

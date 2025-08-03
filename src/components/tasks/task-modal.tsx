@@ -157,17 +157,17 @@ export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
           addTask(res.task);
           toast.success(res.success);
         }
+        form.reset({
+          title: "",
+          description: "",
+          priority: "medium",
+          dueDate: undefined,
+          tag: "",
+          subTasks: [],
+          categoryId: null,
+          listId: myTasksListId || "",
+        });
       }
-      form.reset({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: undefined,
-        tag: "",
-        subTasks: [],
-        categoryId: null,
-        listId: myTasksListId || "",
-      });
       setSubTasks([]);
       setNewSubTaskTitle("");
       onOpenChange(false);

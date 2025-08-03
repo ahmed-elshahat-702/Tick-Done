@@ -1,4 +1,4 @@
-import { TaskDashboard } from "@/components/task-dashboard";
+import { TaskDashboard } from "@/components/layout/task-dashboard";
 import Pomodoro from "./pomodoro-view";
 
 export default function PomodoroTimer() {

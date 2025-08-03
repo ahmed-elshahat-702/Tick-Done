@@ -37,6 +37,7 @@ import {
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { v4 as uuidv4 } from "uuid";
 import { userPasswordSchema } from "@/validation/User";
+import { deleteUserStickyNotes } from "@/actions/stickyNotes";
 
 export function ProfileSettings() {
   const [isEditing, setIsEditing] = useState(false);
@@ -365,6 +366,7 @@ export function ProfileSettings() {
           if (!res.ok) throw new Error("Failed to delete account");
         }),
         deleteUserTasks(),
+        deleteUserStickyNotes(),
       ]);
 
       await signOut({ callbackUrl: "/auth/signin" });

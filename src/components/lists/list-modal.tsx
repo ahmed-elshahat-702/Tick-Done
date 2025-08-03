@@ -116,8 +116,14 @@ export function ListModal({ open, onOpenChange, list }: ListModalProps) {
         } else {
           toast.error(res?.error || "Failed to create list");
         }
+        form.reset({
+          name: "",
+          description: "",
+          color: "#000000",
+          taskIds: [],
+        });
       }
-      form.reset();
+
       onOpenChange(false);
     } catch (error) {
       toast.error("Something went wrong. Please try again.");

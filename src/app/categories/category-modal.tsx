@@ -132,8 +132,14 @@ export function CategoryModal({
         } else {
           toast.error(res?.error || "Failed to create category");
         }
+        form.reset({
+          name: "",
+          parentId: null,
+          color: "#000000",
+          taskIds: [],
+        });
       }
-      form.reset();
+
       onOpenChange(false);
     } catch (error) {
       toast.error("Something went wrong. Please try again.");

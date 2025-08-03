@@ -13,6 +13,7 @@ import {
   Home,
   LogOut,
   Menu,
+  StickyNote,
   User,
   X,
 } from "lucide-react";
@@ -20,17 +21,32 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
+import { ScrollArea } from "../ui/scroll-area";
 import Logo from "./logo";
 import ThemeToggler from "./theme-toggler";
-import { ScrollArea } from "../ui/scroll-area";
 
 const navigation = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/today", label: "Today", icon: CalendarDays },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/completed", label: "Completed", icon: CheckCircle },
-  { href: "/categories", label: "Categories", icon: Folders },
-  { href: "/pomodoro", label: "Pomodoro", icon: AlarmClock },
+  { parent: "Tasks", href: "/today", label: "Today", icon: CalendarDays },
+  { parent: "Tasks", href: "/calendar", label: "Calendar", icon: Calendar },
+  {
+    parent: "Tasks",
+    href: "/completed",
+    label: "Completed",
+    icon: CheckCircle,
+  },
+  { parent: "Tasks", href: "/categories", label: "Categories", icon: Folders },
+  {
+    parent: "Notes",
+    href: "/sticky-notes",
+    label: "Sticky Notes",
+    icon: StickyNote,
+  },
 ];
 
 export function Sidebar() {
@@ -39,6 +55,10 @@ export function Sidebar() {
   const { data: session, status } = useSession();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // تحديد الـ default المفتوح
+  const activeParent =
+    navigation.find((item) => item.href === pathname)?.parent || "";
 
   const handleSignOut = async () => {
     try {
@@ -61,25 +81,100 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 pt-2 px-4 overflow-hidden">
         <ScrollArea className="max-h-full overflow-auto">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label.toLowerCase()}
-                href={item.href}
-                className={cn(
-                  buttonVariants({
-                    variant: pathname === item.href ? "secondary" : "ghost",
-                  }),
-                  "w-full justify-start gap-3 h-10 my-1",
-                  pathname === item.href && "bg-secondary"
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({
+                variant: pathname === "/" ? "secondary" : "ghost",
+              }),
+              "w-full justify-start gap-3 h-10 my-1",
+              pathname === "/" && "bg-secondary"
+            )}
+          >
+            <Home className="w-4 h-4" />
+            Dashboard
+          </Link>
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
+            defaultValue={activeParent === "Tasks" ? "Tasks" : undefined}
+          >
+            <AccordionItem value="Tasks">
+              <AccordionTrigger className="mx-2">Tasks</AccordionTrigger>
+              <AccordionContent>
+                {navigation
+                  .filter((item) => item.parent === "Tasks")
+                  .map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.label.toLowerCase()}
+                        href={item.href}
+                        className={cn(
+                          buttonVariants({
+                            variant:
+                              pathname === item.href ? "secondary" : "ghost",
+                          }),
+                          "w-full justify-start gap-3 h-10 my-1",
+                          pathname === item.href && "bg-secondary"
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
+            defaultValue={activeParent === "Notes" ? "Notes" : undefined}
+          >
+            <AccordionItem value="Notes">
+              <AccordionTrigger className="mx-2">Notes</AccordionTrigger>
+              <AccordionContent>
+                {navigation
+                  .filter((item) => item.parent === "Notes")
+                  .map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.label.toLowerCase()}
+                        href={item.href}
+                        className={cn(
+                          buttonVariants({
+                            variant:
+                              pathname === item.href ? "secondary" : "ghost",
+                          }),
+                          "w-full justify-start gap-3 h-10 my-1",
+                          pathname === item.href && "bg-secondary"
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <Link
+            href="/pomodoro"
+            className={cn(
+              buttonVariants({
+                variant: pathname === "/pomodoro" ? "secondary" : "ghost",
+              }),
+              "w-full justify-start gap-3 h-10 my-1",
+              pathname === "/pomodoro" && "bg-secondary"
+            )}
+          >
+            <AlarmClock className="w-4 h-4" />
+            Pomodoro
+          </Link>
         </ScrollArea>
       </nav>
 

@@ -1,4 +1,4 @@
-import { TaskDashboard } from "@/components/task-dashboard";
+import { TaskDashboard } from "@/components/layout/task-dashboard";
 import TodayView from "./today-view";
 
 export default function TodayPage() {

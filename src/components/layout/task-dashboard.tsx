@@ -8,28 +8,34 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { FolderPlus, List, Plus, X } from "lucide-react";
+import { FolderPlus, List, Plus, StickyNote, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AddBoth } from "./add-both";
+import { AddButton } from "./add-button";
 import { useTaskStore } from "@/lib/store";
 import { toast } from "sonner";
 import { getTaskCategories } from "@/actions/task-categories";
 import { getTaskLists } from "@/actions/task-lists";
+import { getStickyNotes } from "@/actions/stickyNotes";
 
 export function TaskDashboard({ children }: { children: React.ReactNode }) {
-  const { isLoading } = useTaskStore();
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [modalType, setModalType] = useState<
-    "task" | "category" | "list" | null
+    "task" | "category" | "list" | "sticky-note" | null
   >(null);
 
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { setIsLoading, setTasks, setCategories, setLists } = useTaskStore();
+  const {
+    isLoading,
+    setIsLoading,
+    setTasks,
+    setCategories,
+    setLists,
+    setStickyNotes,
+  } = useTaskStore();
 
   useEffect(() => {
     if (
@@ -46,11 +52,13 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
       try {
         setIsLoading(true);
 
-        const [tasksRes, categoriesRes, listsRes] = await Promise.all([
-          fetch("/api/tasks").then((res) => res.json()),
-          getTaskCategories(),
-          getTaskLists(),
-        ]);
+        const [tasksRes, categoriesRes, listsRes, stickyNotesRes] =
+          await Promise.all([
+            fetch("/api/tasks").then((res) => res.json()),
+            getTaskCategories(),
+            getTaskLists(),
+            getStickyNotes(),
+          ]);
 
         if (tasksRes.tasks) setTasks(tasksRes.tasks);
         else toast.error(tasksRes.error || "Failed to fetch tasks");
@@ -60,6 +68,11 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
 
         if (listsRes.taskLists) setLists(listsRes.taskLists);
         else toast.error(listsRes.error || "Failed to fetch lists");
+
+        if (stickyNotesRes.stickyNotes)
+          setStickyNotes(stickyNotesRes.stickyNotes);
+        else
+          toast.error(stickyNotesRes.error || "Failed to fetch sticky notes");
       } catch (error) {
         console.error("Failed to fetch data", error);
         toast.error("Failed to fetch data");
@@ -71,7 +84,7 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
     if (status === "authenticated") {
       fetchData();
     }
-  }, [setCategories, setIsLoading, setLists, setTasks, status]);
+  }, [setCategories, setIsLoading, setLists, setTasks, setStickyNotes, status]);
 
   if (status === "loading") {
     return (
@@ -161,12 +174,25 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
                   <List className="mr-2 h-4 w-4 text-gray-700 dark:text-gray-300" />
                   <span>New List</span>
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setModalType("sticky-note");
+                    setIsAddModalOpen(true);
+                    setIsPopoverOpen(false);
+                  }}
+                  className="w-full justify-start px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <StickyNote className="mr-2 h-4 w-4 text-gray-700 dark:text-gray-300" />
+                  <span>New Sticky Note</span>
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
         )}
       </main>
-      <AddBoth
+      <AddButton
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         initialModal={modalType}

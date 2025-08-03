@@ -32,6 +32,14 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { TaskModal } from "./task-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 
 const priorityColors = {
   low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
@@ -48,15 +56,21 @@ const statusColors = {
 };
 
 export function TaskCard({ task }: { task: TTask }) {
-  const { categories } = useTaskStore();
-
-  const { editTask, removeTask, isHandling, setIsHandling } = useTaskStore();
+  const { categories, editTask, removeTask, isHandling, setIsHandling } =
+    useTaskStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isTaskUpdating, setIsTaskUpdating] = useState(false);
   const [updatingSubTaskId, setUpdatingSubTaskId] = useState<string | null>(
     null
   );
   const [isSubTasksOpen, setIsSubTasksOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<TTask | null>(null);
+
+  const handleOpenDeleteDialog = (task: TTask) => {
+    setTaskToDelete(task);
+    setIsDeleteDialogOpen(true);
+  };
 
   const dingAudio =
     typeof Audio !== "undefined" ? new Audio("/sounds/check.mp3") : null;
@@ -209,7 +223,7 @@ export function TaskCard({ task }: { task: TTask }) {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={handleDelete}
+                        onClick={() => handleOpenDeleteDialog(task)}
                         className="text-red-600"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -318,6 +332,45 @@ export function TaskCard({ task }: { task: TTask }) {
       </Card>
 
       <TaskModal open={isEditOpen} onOpenChange={setIsEditOpen} task={task} />
+
+      {taskToDelete && (
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-base sm:text-lg font-semibold text-destructive truncate max-w-[90%] flex items-center gap-2">
+                Delete:
+                <span className="truncate block max-w-40 md:max-w-60">
+                  {taskToDelete.title}
+                </span>
+              </DialogTitle>
+              <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300 space-y-2 mt-1">
+                <span className="block">
+                  Are you sure you want to delete this task?
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+              <Button
+                variant="destructive"
+                onClick={() => handleDelete()}
+                disabled={isHandling}
+                className="w-full sm:w-auto"
+              >
+                Delete Task
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                disabled={isHandling}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

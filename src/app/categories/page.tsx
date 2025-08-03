@@ -1,5 +1,5 @@
 import CategoryList from "./category-list";
-import { TaskDashboard } from "@/components/task-dashboard";
+import { TaskDashboard } from "@/components/layout/task-dashboard";
 
 export default function CategoriesPage() {
   return (
