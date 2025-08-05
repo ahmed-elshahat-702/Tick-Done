@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { TList } from "@/types/list";
 import { TaskListFormData, taskListSchema } from "@/validation/List";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,7 +34,7 @@ interface ListModalProps {
 }
 
 export function ListModal({ open, onOpenChange, list }: ListModalProps) {
-  const { addList, setLists, tasks, lists, updateTasksList } = useTaskStore();
+  const { addList, setLists, tasks, lists, updateTasksList } = useAppStore();
   const [isHandling, setIsHandling] = useState(false);
 
   const myTasksList = lists.find((l) => l.name === "My Tasks");

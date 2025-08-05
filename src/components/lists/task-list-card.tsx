@@ -1,7 +1,7 @@
 import { deleteTaskList } from "@/actions/task-lists";
 import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { TList } from "@/types/list";
 import { TTask } from "@/types/task";
 import { Edit, Trash2 } from "lucide-react";
@@ -24,7 +24,7 @@ type Props = {
 };
 
 const TaskListCard = ({ list, tasks, setSelectedListId }: Props) => {
-  const { setTasks, lists, setLists } = useTaskStore();
+  const { setTasks, lists, setLists } = useAppStore();
   const [isHandling, setIsHandling] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [listToDelete, setListToDelete] = useState<TList | null>(null);

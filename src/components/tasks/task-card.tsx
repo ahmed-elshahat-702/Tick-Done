@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { TTask } from "@/types/task";
 import { format, isPast, isToday } from "date-fns";
@@ -57,7 +57,7 @@ const statusColors = {
 
 export function TaskCard({ task }: { task: TTask }) {
   const { categories, editTask, removeTask, isHandling, setIsHandling } =
-    useTaskStore();
+    useAppStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isTaskUpdating, setIsTaskUpdating] = useState(false);
   const [updatingSubTaskId, setUpdatingSubTaskId] = useState<string | null>(

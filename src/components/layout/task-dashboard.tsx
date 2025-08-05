@@ -8,16 +8,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { FolderPlus, List, Plus, StickyNote, X } from "lucide-react";
+import {
+  FolderPlus,
+  List,
+  NotebookPen,
+  Plus,
+  StickyNote,
+  X,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AddButton } from "./add-button";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { getTaskCategories } from "@/actions/task-categories";
 import { getTaskLists } from "@/actions/task-lists";
 import { getStickyNotes } from "@/actions/stickyNotes";
+import { getNotes } from "@/actions/notes";
+import Link from "next/link";
 
 export function TaskDashboard({ children }: { children: React.ReactNode }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -34,8 +43,9 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
     setTasks,
     setCategories,
     setLists,
+    setNotes,
     setStickyNotes,
-  } = useTaskStore();
+  } = useAppStore();
 
   useEffect(() => {
     if (
@@ -52,11 +62,12 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
       try {
         setIsLoading(true);
 
-        const [tasksRes, categoriesRes, listsRes, stickyNotesRes] =
+        const [tasksRes, categoriesRes, listsRes, notesRes, stickyNotesRes] =
           await Promise.all([
             fetch("/api/tasks").then((res) => res.json()),
             getTaskCategories(),
             getTaskLists(),
+            getNotes(),
             getStickyNotes(),
           ]);
 
@@ -68,6 +79,9 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
 
         if (listsRes.taskLists) setLists(listsRes.taskLists);
         else toast.error(listsRes.error || "Failed to fetch lists");
+
+        if (notesRes.notes) setNotes(notesRes.notes);
+        else toast.error(notesRes.error || "Failed to fetch notes");
 
         if (stickyNotesRes.stickyNotes)
           setStickyNotes(stickyNotesRes.stickyNotes);
@@ -84,7 +98,15 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
     if (status === "authenticated") {
       fetchData();
     }
-  }, [setCategories, setIsLoading, setLists, setTasks, setStickyNotes, status]);
+  }, [
+    setCategories,
+    setIsLoading,
+    setLists,
+    setTasks,
+    setNotes,
+    setStickyNotes,
+    status,
+  ]);
 
   if (status === "loading") {
     return (
@@ -173,6 +195,18 @@ export function TaskDashboard({ children }: { children: React.ReactNode }) {
                 >
                   <List className="mr-2 h-4 w-4 text-gray-700 dark:text-gray-300" />
                   <span>New List</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="w-full justify-start px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Link href="/notes/new">
+                    <NotebookPen className="mr-2 h-4 w-4 text-gray-700 dark:text-gray-300" />
+                    <span>New Note</span>
+                  </Link>
                 </Button>
                 <Button
                   variant="ghost"

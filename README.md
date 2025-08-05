@@ -31,7 +31,7 @@ TickDone is a modern, full-stack task management application built with Next.js,
 - `src/models/` – Mongoose models for MongoDB (includes `Task`, `User`, `TaskCategory`)
 - `src/types/` – TypeScript types and interfaces (includes `task.ts`, `category.ts`, `user.ts`)
 - `src/actions/` – Server actions for tasks, users, and task categories
-- `src/lib/` – Utilities, database connection, Zustand stores (including `useTaskStore`)
+- `src/lib/` – Utilities, database connection, Zustand stores (including `useAppStore`)
 - `src/validation/` – Zod schemas for validation (task, user, category)
 - `public/` – Static assets (images, icons)
 

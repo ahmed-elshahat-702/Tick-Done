@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import ListCard from "./task-list-card";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
@@ -9,7 +9,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 
 const ListsView = () => {
-  const { lists, tasks, error, isLoading } = useTaskStore();
+  const { lists, tasks, error, isLoading } = useAppStore();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
   useEffect(() => {

@@ -11,7 +11,7 @@ import {
   sendNotification,
 } from "@/actions/notifications";
 import { Label } from "@/components/ui/label";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -37,7 +37,7 @@ export default function Pomodoro() {
     reset,
     setIsRunning,
     setIsWorkSession,
-  } = useTaskStore();
+  } = useAppStore();
 
   const [time, setTime] = useState(25 * 60);
   const [workDuration, setWorkDuration] = useState(25);

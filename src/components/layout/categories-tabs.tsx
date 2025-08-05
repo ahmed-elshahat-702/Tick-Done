@@ -2,12 +2,12 @@
 
 import { TaskCard } from "@/components/tasks/task-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { TTask } from "@/types/task";
 import { useState } from "react";
 
 const CategoriesTabs = ({ tasks }: { tasks: TTask[] }) => {
-  const { categories } = useTaskStore();
+  const { categories } = useAppStore();
   const [activeTab, setActiveTab] = useState("all");
   const [subTab, setSubTab] = useState<string | null>(null);
   const [showAllParentTasks, setShowAllParentTasks] = useState(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 // import CategoriesTabs from "../categories-tabs";
 import { LoadingSpinner } from "@/components/layout/loading-spinner";
 import { useEffect } from "react";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import ListsView from "@/components/lists/lists-view";
 
 export function TaskView() {
-  const { isLoading, error, tasks } = useTaskStore();
+  const { isLoading, error, tasks } = useAppStore();
 
   useEffect(() => {
     if (error) {

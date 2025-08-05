@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { StickyNote as TStickyNote } from "@/types/notes";
 import { StickyNoteFormData, stickyNoteSchema } from "@/validation/Note";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +43,7 @@ const StickyNoteModal = ({
     updateStickyNote: editStickyNote,
     isHandling,
     setIsHandling,
-  } = useTaskStore();
+  } = useAppStore();
 
   const form = useForm<StickyNoteFormData>({
     resolver: zodResolver(stickyNoteSchema),

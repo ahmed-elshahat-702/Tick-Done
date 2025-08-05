@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const noteSchema = z.object({
+  title: z.string().optional(),
+  content: z.any(),
+});
+
 export const stickyNoteSchema = z.object({
   title: z.string().optional(),
   content: z.string().min(1, "Content is required"),
@@ -14,4 +19,5 @@ export const stickyNoteSchema = z.object({
     .optional(),
 });
 
+export type NoteFormData = z.infer<typeof noteSchema>;
 export type StickyNoteFormData = z.infer<typeof stickyNoteSchema>;

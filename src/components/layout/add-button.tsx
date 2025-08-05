@@ -1,7 +1,7 @@
 "use client";
 
-import { CategoryModal } from "@/app/categories/category-modal";
-import { useTaskStore } from "@/lib/store";
+import { CategoryModal } from "@/app/(tasks)/categories/category-modal";
+import { useAppStore } from "@/lib/store";
 import { useEffect, useState } from "react";
 import { ListModal } from "../lists/list-modal";
 import { TaskModal } from "../tasks/task-modal";
@@ -20,7 +20,7 @@ export function AddButton({
   onOpenChange,
   initialModal,
 }: AddButtonProps) {
-  const { isHandling } = useTaskStore();
+  const { isHandling } = useAppStore();
   const [activeModal, setActiveModal] = useState<ModalType>(
     initialModal || null
   );

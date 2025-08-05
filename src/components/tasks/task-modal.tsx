@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { TTask, SubTask } from "@/types/task";
 import { TaskFormData, taskSchema } from "@/validation/Task";
@@ -53,7 +53,7 @@ interface TaskModalProps {
 
 export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
   const { addTask, editTask, isHandling, setIsHandling, categories, lists } =
-    useTaskStore();
+    useAppStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
 

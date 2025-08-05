@@ -2,15 +2,16 @@
 
 import { TTask } from "@/types/task";
 import { TCategory } from "@/types/category";
-import { StickyNote as TStickyNote } from "@/types/notes";
+import { StickyNote as TStickyNote, Note as TNote } from "@/types/notes";
 import { TList } from "@/types/list";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-interface TaskStore {
+interface AppStore {
   tasks: TTask[];
   categories: TCategory[];
   lists: TList[];
+  notes: TNote[];
   stickyNotes: TStickyNote[];
   isLoading: boolean;
   isHandling: boolean;
@@ -48,6 +49,11 @@ interface TaskStore {
   updateTasksList: (taskIds: string[], listId: string | null) => void;
   removeTasksList: (taskIds: string[]) => void;
 
+  setNotes: (newNotes: TNote[]) => void;
+  addNote: (note: TNote) => void;
+  updateNote: (noteId: string, data: Partial<TNote>) => Promise<void>;
+  removeNote: (noteId: string) => void;
+
   setStickyNotes: (newStickyNotes: TStickyNote[]) => void;
   addStickyNote: (stickyNote: TStickyNote) => void;
   updateStickyNote: (
@@ -59,12 +65,13 @@ interface TaskStore {
   clearError: () => void;
 }
 
-export const useTaskStore = create<TaskStore>()(
+export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       tasks: [],
       categories: [],
       lists: [],
+      notes: [],
       stickyNotes: [],
       isLoading: false,
       isHandling: false,
@@ -164,7 +171,25 @@ export const useTaskStore = create<TaskStore>()(
           ),
         })),
 
+      setNotes: (newNotes) => set({ notes: newNotes }),
+      addNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
+
+      updateNote: async (noteId, data) =>
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note._id === noteId
+              ? { ...note, ...data, updatedAt: new Date() }
+              : note
+          ),
+        })),
+
+      removeNote: (noteId) =>
+        set((state) => ({
+          notes: state.notes.filter((note) => note._id !== noteId),
+        })),
+
       setStickyNotes: (newStickyNotes) => set({ stickyNotes: newStickyNotes }),
+
       addStickyNote: (stickyNote) =>
         set((state) => ({ stickyNotes: [...state.stickyNotes, stickyNote] })),
 
@@ -192,6 +217,8 @@ export const useTaskStore = create<TaskStore>()(
         tasks: state.tasks,
         categories: state.categories,
         lists: state.lists,
+        notes: state.notes,
+        stickyNotes: state.stickyNotes,
         isRunning: state.isRunning,
         isWorkSession: state.isWorkSession,
         startTime: state.startTime,

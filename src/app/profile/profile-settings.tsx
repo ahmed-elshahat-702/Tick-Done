@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useTaskStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Calendar,
@@ -61,7 +61,7 @@ export function ProfileSettings() {
   const [bio, setBio] = useState(user?.bio || "");
   const [image, setImage] = useState<string>(user?.image || "");
 
-  const { tasks } = useTaskStore();
+  const { tasks } = useAppStore();
 
   const completedTasks = tasks.filter((task) => task.status === "done").length;
   const totalTasks = tasks.length;

@@ -13,6 +13,7 @@ import {
   Home,
   LogOut,
   Menu,
+  NotebookPen,
   StickyNote,
   User,
   X,
@@ -41,6 +42,12 @@ const navigation = [
     icon: CheckCircle,
   },
   { parent: "Tasks", href: "/categories", label: "Categories", icon: Folders },
+  {
+    parent: "Notes",
+    href: "/notes",
+    label: "Notes",
+    icon: NotebookPen,
+  },
   {
     parent: "Notes",
     href: "/sticky-notes",
