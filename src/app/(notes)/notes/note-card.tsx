@@ -94,7 +94,10 @@ const NoteCard = ({ note }: { note: TNote }) => {
                 <GripVertical className="h-4 w-4 text-gray-600" />
               </button>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger
+                  asChild
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Button
                     variant="ghost"
                     size="icon"
@@ -104,9 +107,13 @@ const NoteCard = ({ note }: { note: TNote }) => {
                     <MoreHorizontal className="h-4 w-4 text-gray-600" />
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => handleOpenDeleteDialog(note)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDeleteDialog(note);
+                    }}
                     className="text-red-600"
                   >
                     <Trash2 className="h-4 w-4 mr-2" /> Delete
