@@ -87,7 +87,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 pt-2 px-4 overflow-hidden">
-        <ScrollArea className="max-h-full overflow-auto">
+        <ScrollArea className="h-full">
           <Link
             href="/"
             className={cn(
