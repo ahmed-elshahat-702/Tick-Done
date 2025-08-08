@@ -10,7 +10,7 @@ import {
   CalendarDays,
   CheckCircle,
   Folders,
-  Home,
+  ListTodo,
   LogOut,
   Menu,
   NotebookPen,
@@ -33,8 +33,9 @@ import Logo from "./logo";
 import ThemeToggler from "./theme-toggler";
 
 const navigation = [
-  { parent: "Tasks", href: "/today", label: "Today", icon: CalendarDays },
-  { parent: "Tasks", href: "/calendar", label: "Calendar", icon: Calendar },
+  { parent: "Tasks", href: "/", label: "Tasks", icon: ListTodo },
+  { parent: "Tasks", href: "/today", label: "Today", icon: Calendar },
+  { parent: "Tasks", href: "/calendar", label: "Calendar", icon: CalendarDays },
   {
     parent: "Tasks",
     href: "/completed",
@@ -63,7 +64,6 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // تحديد الـ default المفتوح
   const activeParent =
     navigation.find((item) => item.href === pathname)?.parent || "";
 
@@ -88,19 +88,6 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 pt-2 px-4 overflow-hidden">
         <ScrollArea className="h-full">
-          <Link
-            href="/"
-            className={cn(
-              buttonVariants({
-                variant: pathname === "/" ? "secondary" : "ghost",
-              }),
-              "w-full justify-start gap-3 h-10 my-1",
-              pathname === "/" && "bg-secondary"
-            )}
-          >
-            <Home className="w-4 h-4" />
-            Dashboard
-          </Link>
           <Accordion
             type="single"
             collapsible

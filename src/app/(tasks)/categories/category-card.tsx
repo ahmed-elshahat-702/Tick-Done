@@ -80,14 +80,18 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
           ];
         };
         const idsToRemove = getDescendantIds(categoryId);
-        setCategories(categories.filter((c) => !idsToRemove.includes(c._id)));
+        const updatedCategories = categories.filter(
+          (c) => !idsToRemove.includes(c._id)
+        );
+        setCategories(updatedCategories);
         if (deleteTasks) {
           const taskIdsToRemove = tasks
             .filter((task) => idsToRemove.includes(task.categoryId || ""))
             .map((task) => task._id);
           setTasks(tasks.filter((task) => !taskIdsToRemove.includes(task._id)));
         }
-        setSelectedCategoryId(categories[0]?._id || null);
+        // تحديث selectedCategoryId بناءً على الفئات المتبقية
+        setSelectedCategoryId(updatedCategories[0]?._id || null);
         toast.success(res.success);
       } else {
         toast.error(res.error || "Failed to delete category.");
