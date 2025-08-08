@@ -142,7 +142,7 @@ export function CalendarView() {
         </div>
 
         <div>
-          <Card>
+          <Card className="bg-background">
             <CardHeader>
               <CardTitle className="text-lg">
                 {selectedDate

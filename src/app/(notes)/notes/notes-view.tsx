@@ -105,7 +105,7 @@ const NotesView = () => {
     );
   }
   return (
-    <div>
+    <div className="h-full w-full">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Notes</h2>
@@ -130,7 +130,7 @@ const NotesView = () => {
             items={memoizedNotes.map((note) => note._id)}
             strategy={rectSortingStrategy}
           >
-            <div className="w-full min-h-fit h-full rounded-lg grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 bg-accent p-4 grid-flow-row-dense [grid-auto-rows:15rem]">
+            <div className="w-full h-full rounded-lg grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 bg-muted/80 dark:bg-muted/40 p-4 grid-flow-row-dense [grid-auto-rows:15rem]">
               {memoizedNotes.map((note) => (
                 <NoteCard key={note._id} note={note} />
               ))}

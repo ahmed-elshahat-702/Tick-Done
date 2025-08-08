@@ -75,7 +75,7 @@ const NoteCard = ({ note }: { note: TNote }) => {
       <div
         ref={setNodeRef}
         style={style}
-        className="w-full h-full flex flex-col justify-between p-4 bg-background rounded-lg shadow hover:shadow-md transition-shadow duration-200 cursor-pointer"
+        className="w-full h-full flex flex-col justify-between p-4 bg-background dark:bg-muted border rounded-lg shadow hover:shadow-md transition-shadow duration-200 cursor-pointer"
         onClick={() => {
           if (!isDragging) {
             router.push(`/notes/${note._id}`);
@@ -84,7 +84,9 @@ const NoteCard = ({ note }: { note: TNote }) => {
       >
         <div className="h-full w-full flex flex-col gap-2">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold truncate">{note.title}</h3>
+            <h3 className="text-lg font-semibold truncate">
+              {note.title || "Untitled Note"}
+            </h3>
             <div className="flex items-center space-x-1">
               <button
                 {...listeners}

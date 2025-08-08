@@ -135,7 +135,7 @@ const StickyNotesView = () => {
             items={memoizedStickyNotes.map((note) => note._id)}
             strategy={rectSortingStrategy}
           >
-            <div className="w-full min-h-fit h-full rounded-lg grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 bg-accent p-4 grid-flow-row-dense [grid-auto-rows:15rem]">
+            <div className="w-full min-h-fit h-full rounded-lg grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4 grid-flow-row-dense [grid-auto-rows:15rem]">
               {memoizedStickyNotes.map((note) => (
                 <StickyNoteCard key={note._id} stickyNote={note} />
               ))}

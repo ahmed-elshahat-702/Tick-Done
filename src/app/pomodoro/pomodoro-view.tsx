@@ -296,8 +296,8 @@ export default function Pomodoro() {
   const progress = ((sessionDuration - time) / sessionDuration) * 100;
 
   return (
-    <Card className="w-full max-w-md mx-auto border-none shadow-none overflow-hidden">
-      <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+    <Card className="w-full max-w-md mx-auto border-none shadow-none overflow-hidden bg-muted/50">
+      <CardHeader className="px-6 py-2 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between">
           <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
             Pomodoro Timer
@@ -322,7 +322,7 @@ export default function Pomodoro() {
         </div>
       </CardHeader>
 
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="px-6 py-2 space-y-6">
         {error && (
           <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
             <p className="text-red-600 dark:text-red-400 text-center text-sm">
