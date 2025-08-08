@@ -49,19 +49,19 @@ interface TaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task?: TTask | null;
-  selectedListId?: string | null;
-  selectedCategoryId?: string | null;
 }
 
-export function TaskModal({
-  open,
-  onOpenChange,
-  task,
-  selectedListId,
-  selectedCategoryId,
-}: TaskModalProps) {
-  const { addTask, editTask, isHandling, setIsHandling, categories, lists } =
-    useAppStore();
+export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
+  const {
+    addTask,
+    editTask,
+    isHandling,
+    setIsHandling,
+    categories,
+    lists,
+    selectedListId,
+    selectedCategoryId,
+  } = useAppStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
 

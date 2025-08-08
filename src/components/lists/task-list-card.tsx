@@ -1,12 +1,7 @@
 import { deleteTaskList } from "@/actions/task-lists";
+import { deleteAllListTasks, deleteCompletedListTasks } from "@/actions/tasks";
 import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/lib/store";
-import { TList } from "@/types/list";
-import { TTask } from "@/types/task";
-import { Edit, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +10,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAppStore } from "@/lib/store";
+import { TList } from "@/types/list";
+import { TTask } from "@/types/task";
+import { Edit, Trash, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { ListModal } from "./list-modal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 type Props = {
   list: TList;
@@ -29,6 +36,9 @@ const TaskListCard = ({ list, tasks }: Props) => {
   const [listToDelete, setListToDelete] = useState<TList | null>(null);
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [editingList, setEditingList] = useState<TList | null>(null);
+  const [isDeleteCompletedDialogOpen, setIsDeleteCompletedDialogOpen] =
+    useState(false);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
 
   const isMyTasksList = list.name === "My Tasks";
   const listTasks = isMyTasksList
@@ -85,12 +95,59 @@ const TaskListCard = ({ list, tasks }: Props) => {
     }
   };
 
+  const handleDeleteCompletedTasks = async () => {
+    try {
+      setIsHandling(true);
+      const res = await deleteCompletedListTasks(list._id);
+
+      if (res?.success) {
+        const updatedTasks = tasks.filter(
+          (task) => !(task.listId === list._id && task.status === "done")
+        );
+
+        setTasks(updatedTasks);
+        toast.success(res.success);
+      } else {
+        toast.error(res.error || "Failed to delete completed tasks.");
+      }
+    } catch (error) {
+      toast.error("Something went wrong.");
+      console.error(error);
+    } finally {
+      setIsHandling(false);
+      setIsDeleteCompletedDialogOpen(false);
+    }
+  };
+
+  const handleDeleteAllTasks = async () => {
+    try {
+      setIsHandling(true);
+      const res = await deleteAllListTasks(list._id);
+
+      if (res?.success) {
+        const updatedTasks = tasks.filter((task) => task.listId !== list._id);
+        setTasks(updatedTasks);
+        toast.success(res.success);
+      } else {
+        toast.error(res.error || "Failed to delete all tasks.");
+      }
+    } catch (error) {
+      toast.error("Something went wrong.");
+      console.error(error);
+    } finally {
+      setIsHandling(false);
+      setIsDeleteAllDialogOpen(false);
+    }
+  };
+
   const deleteListTasks = listToDelete
     ? tasks.filter((task) => task.listId === listToDelete._id)
     : [];
 
+  const completedTasks = listTasks.filter((task) => task.status === "done");
+
   return (
-    <div className="space-y-4 bg-muted/50 dark:bg-muted/100 min-h-96 rounded-md p-4 md:p-6">
+    <div className="space-y-4 p-4 md:p-6">
       <div className="relative w-full space-y-1 p-2">
         <h1 className="font-bold">{list.name}</h1>
 
@@ -123,6 +180,49 @@ const TaskListCard = ({ list, tasks }: Props) => {
           </div>
         )}
       </div>
+
+      <TooltipProvider>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="text-sm font-medium text-muted-foreground">
+            Bulk Actions
+          </div>
+          <div className="flex gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDeleteCompletedDialogOpen(true)}
+                  disabled={isHandling || completedTasks.length === 0}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Completed
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Delete all completed tasks</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDeleteAllDialogOpen(true)}
+                  disabled={isHandling || listTasks.length === 0}
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Delete All
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>This will delete all tasks</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </TooltipProvider>
 
       <div className="space-y-2">
         {listTasks.length > 0 ? (
@@ -210,6 +310,76 @@ const TaskListCard = ({ list, tasks }: Props) => {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog
+        open={isDeleteCompletedDialogOpen}
+        onOpenChange={setIsDeleteCompletedDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg font-semibold text-destructive">
+              Delete Completed Tasks
+            </DialogTitle>
+            <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300">
+              Are you sure you want to delete all completed tasks in this list?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteCompletedTasks}
+              disabled={isHandling}
+              className="w-full sm:w-auto"
+            >
+              {isHandling ? "Deleting..." : "Delete Completed Tasks"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteCompletedDialogOpen(false)}
+              disabled={isHandling}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDeleteAllDialogOpen}
+        onOpenChange={setIsDeleteAllDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg font-semibold text-destructive">
+              Delete All Tasks
+            </DialogTitle>
+            <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300">
+              Are you sure you want to delete all tasks in this list? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAllTasks}
+              disabled={isHandling}
+              className="w-full sm:w-auto"
+            >
+              {isHandling ? "Deleting..." : "Delete All Tasks"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteAllDialogOpen(false)}
+              disabled={isHandling}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

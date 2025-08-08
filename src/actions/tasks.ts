@@ -28,10 +28,11 @@ export async function createTask(taskData: TaskFormData) {
     const isExisting = await Task.findOne({
       title: taskData.title,
       userId: user._id,
+      listId: taskData.listId,
     });
 
     if (isExisting) {
-      return { error: "Task with this title already exists." };
+      return { error: "Task with this title already exists in this list." };
     }
 
     // Validate categoryId if provided
@@ -112,10 +113,11 @@ export async function UpdateTask(taskId: string, taskData: TaskFormData) {
     const isExisting = await Task.findOne({
       title: taskData.title,
       userId: user._id,
+      listId: taskData.listId,
     });
 
     if (isExisting && isExisting._id != taskId) {
-      return { error: "Task with this title already exists." };
+      return { error: "Task with this title already exists in this list." };
     }
 
     // Validate categoryId if provided
@@ -287,6 +289,156 @@ export async function deleteTask(taskId: string) {
   } catch (error) {
     console.error("Failed to delete task:", error);
     return { error: "Failed to delete task" };
+  }
+}
+
+export async function deleteCompletedListTasks(listId: string) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!listId) {
+      return { error: "List ID is required." };
+    }
+
+    await connectDB();
+
+    const result = await Task.deleteMany({
+      userId: session.user.id,
+      status: "done",
+      listId: listId,
+    });
+
+    revalidatePath("/");
+
+    return {
+      success: `Deleted ${result.deletedCount} completed tasks in the selected list.`,
+    };
+  } catch (error) {
+    console.error("Failed to delete completed tasks:", error);
+    return { error: "Failed to delete completed tasks" };
+  }
+}
+
+export async function deleteAllListTasks(listId: string) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!listId) {
+      return { error: "List ID is required." };
+    }
+
+    await connectDB();
+
+    const result = await Task.deleteMany({
+      userId: session.user.id,
+      listId: listId,
+    });
+
+    revalidatePath("/");
+
+    return {
+      success: `Deleted ${result.deletedCount} tasks in the selected list.`,
+    };
+  } catch (error) {
+    console.error("Failed to delete all tasks:", error);
+    return { error: "Failed to delete all tasks" };
+  }
+}
+
+export async function deleteCompletedCategoryTasks(categoryId: string) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!categoryId) {
+      return { error: "Category ID is required." };
+    }
+
+    await connectDB();
+
+    // Get all descendant category IDs
+    const getDescendantIds = async (parentId: string): Promise<string[]> => {
+      const children = await TaskCategory.find({
+        parentId,
+        userId: session.user.id,
+      });
+      const descendantIds = await Promise.all(
+        children.map((child) => getDescendantIds(child._id))
+      );
+      return [parentId, ...descendantIds.flat()];
+    };
+
+    const categoryIds = await getDescendantIds(categoryId);
+
+    const result = await Task.deleteMany({
+      userId: session.user.id,
+      status: "done",
+      categoryId: { $in: categoryIds },
+    });
+
+    revalidatePath("/");
+
+    return {
+      success: `Deleted ${result.deletedCount} completed tasks in the selected category.`,
+    };
+  } catch (error) {
+    console.error("Failed to delete completed tasks:", error);
+    return { error: "Failed to delete completed tasks" };
+  }
+}
+
+export async function deleteAllCategoryTasks(categoryId: string) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { error: "Unauthorized" };
+    }
+
+    if (!categoryId) {
+      return { error: "Category ID is required." };
+    }
+
+    await connectDB();
+
+    // Get all descendant category IDs
+    const getDescendantIds = async (parentId: string): Promise<string[]> => {
+      const children = await TaskCategory.find({
+        parentId,
+        userId: session.user.id,
+      });
+      const descendantIds = await Promise.all(
+        children.map((child) => getDescendantIds(child._id))
+      );
+      return [parentId, ...descendantIds.flat()];
+    };
+
+    const categoryIds = await getDescendantIds(categoryId);
+
+    const result = await Task.deleteMany({
+      userId: session.user.id,
+      categoryId: { $in: categoryIds },
+    });
+
+    revalidatePath("/");
+
+    return {
+      success: `Deleted ${result.deletedCount} tasks in the selected category.`,
+    };
+  } catch (error) {
+    console.error("Failed to delete all tasks:", error);
+    return { error: "Failed to delete all tasks" };
   }
 }
 
