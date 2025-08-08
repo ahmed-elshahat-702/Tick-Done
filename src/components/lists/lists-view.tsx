@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import ListCard from "./task-list-card";
 import { toast } from "sonner";
@@ -9,8 +9,8 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 
 const ListsView = () => {
-  const { lists, tasks, error, isLoading } = useAppStore();
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const { lists, tasks, error, isLoading, selectedListId, setSelectedListId } =
+    useAppStore();
 
   useEffect(() => {
     if (error) {
@@ -27,7 +27,7 @@ const ListsView = () => {
         setSelectedListId(allTasksList._id);
       }
     }
-  }, [lists, selectedListId]);
+  }, [lists, selectedListId, setSelectedListId]);
 
   if (isLoading) {
     return (
@@ -77,11 +77,7 @@ const ListsView = () => {
       {/* Tasks in Selected List */}
       <div className="px-4">
         {selectedList ? (
-          <ListCard
-            list={selectedList}
-            tasks={tasks}
-            setSelectedListId={setSelectedListId}
-          />
+          <ListCard list={selectedList} tasks={tasks} />
         ) : (
           <p className="text-muted-foreground text-sm">No list selected.</p>
         )}

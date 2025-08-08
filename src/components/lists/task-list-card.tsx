@@ -20,11 +20,10 @@ import { ListModal } from "./list-modal";
 type Props = {
   list: TList;
   tasks: TTask[];
-  setSelectedListId: (id: string | null) => void;
 };
 
-const TaskListCard = ({ list, tasks, setSelectedListId }: Props) => {
-  const { setTasks, lists, setLists } = useAppStore();
+const TaskListCard = ({ list, tasks }: Props) => {
+  const { setTasks, lists, setLists, setSelectedListId } = useAppStore();
   const [isHandling, setIsHandling] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [listToDelete, setListToDelete] = useState<TList | null>(null);

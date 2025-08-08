@@ -49,9 +49,17 @@ interface TaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task?: TTask | null;
+  selectedListId?: string | null;
+  selectedCategoryId?: string | null;
 }
 
-export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
+export function TaskModal({
+  open,
+  onOpenChange,
+  task,
+  selectedListId,
+  selectedCategoryId,
+}: TaskModalProps) {
   const { addTask, editTask, isHandling, setIsHandling, categories, lists } =
     useAppStore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task?.subTasks || []);
@@ -69,8 +77,8 @@ export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
       dueDate: undefined,
       tag: "",
       subTasks: [],
-      categoryId: null,
-      listId: myTasksListId || "",
+      categoryId: selectedCategoryId || null,
+      listId: selectedListId || myTasksListId || "",
     },
   });
 
@@ -95,12 +103,12 @@ export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
         dueDate: undefined,
         tag: "",
         subTasks: [],
-        categoryId: null,
-        listId: myTasksListId || "",
+        categoryId: selectedCategoryId || null,
+        listId: selectedListId || myTasksListId || "",
       });
       setSubTasks([]);
     }
-  }, [task, form, myTasksListId]);
+  }, [task, form, myTasksListId, selectedListId, selectedCategoryId]);
 
   const addSubTask = () => {
     if (!newSubTaskTitle.trim()) {
@@ -164,8 +172,8 @@ export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
           dueDate: undefined,
           tag: "",
           subTasks: [],
-          categoryId: null,
-          listId: myTasksListId || "",
+          categoryId: selectedCategoryId || null,
+          listId: selectedListId || myTasksListId || "",
         });
       }
       setSubTasks([]);
@@ -188,8 +196,8 @@ export function TaskModal({ open, onOpenChange, task }: TaskModalProps) {
         dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
         tag: task?.tag || "",
         subTasks: task?.subTasks || [],
-        categoryId: task?.categoryId ?? null,
-        listId: task?.listId || myTasksListId || "",
+        categoryId: task?.categoryId || selectedCategoryId || null,
+        listId: task?.listId || selectedListId || myTasksListId || "",
       });
       setSubTasks(task?.subTasks || []);
       setNewSubTaskTitle("");

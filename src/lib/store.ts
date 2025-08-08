@@ -16,6 +16,8 @@ interface AppStore {
   isLoading: boolean;
   isHandling: boolean;
   error: string | null;
+  selectedListId: string | null;
+  selectedCategoryId: string | null;
 
   isRunning: boolean;
   isWorkSession: boolean;
@@ -43,11 +45,13 @@ interface AppStore {
   addCategory: (category: TCategory) => void;
   updateTasksCategory: (taskIds: string[], categoryId: string | null) => void;
   removeTasksCategory: (taskIds: string[]) => void;
+  setSelectedCategoryId: (categoryId: string | null) => void;
 
   setLists: (newLists: TList[]) => void;
   addList: (list: TList) => void;
   updateTasksList: (taskIds: string[], listId: string | null) => void;
   removeTasksList: (taskIds: string[]) => void;
+  setSelectedListId: (listId: string | null) => void;
 
   setNotes: (newNotes: TNote[]) => void;
   addNote: (note: TNote) => void;
@@ -76,6 +80,8 @@ export const useAppStore = create<AppStore>()(
       isLoading: false,
       isHandling: false,
       error: null,
+      selectedListId: null,
+      selectedCategoryId: null,
 
       isRunning: false,
       isWorkSession: true,
@@ -152,6 +158,8 @@ export const useAppStore = create<AppStore>()(
           ),
         })),
 
+      setSelectedCategoryId: (state) => set({ selectedCategoryId: state }),
+
       setLists: (newLists) => set({ lists: newLists }),
       addList: (list) => set((state) => ({ lists: [...state.lists, list] })),
 
@@ -170,6 +178,8 @@ export const useAppStore = create<AppStore>()(
             taskIds.includes(task._id) ? { ...task, listId: undefined } : task
           ),
         })),
+
+      setSelectedListId: (state) => set({ selectedListId: state }),
 
       setNotes: (newNotes) => set({ notes: newNotes }),
       addNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
@@ -217,6 +227,8 @@ export const useAppStore = create<AppStore>()(
         tasks: state.tasks,
         categories: state.categories,
         lists: state.lists,
+        selectedListId: state.selectedListId,
+        selectedCategoryId: state.selectedCategoryId,
         notes: state.notes,
         stickyNotes: state.stickyNotes,
         isRunning: state.isRunning,

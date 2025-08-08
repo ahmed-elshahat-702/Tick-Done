@@ -20,7 +20,7 @@ export function AddButton({
   onOpenChange,
   initialModal,
 }: AddButtonProps) {
-  const { isHandling } = useAppStore();
+  const { isHandling, selectedListId, selectedCategoryId } = useAppStore();
   const [activeModal, setActiveModal] = useState<ModalType>(
     initialModal || null
   );
@@ -49,6 +49,8 @@ export function AddButton({
       <TaskModal
         open={isTaskModalOpen}
         onOpenChange={(o) => !o && handleClose()}
+        selectedListId={selectedListId}
+        selectedCategoryId={selectedCategoryId}
       />
 
       <CategoryModal

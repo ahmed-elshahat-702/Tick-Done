@@ -25,14 +25,11 @@ import { CategoryModal } from "./category-modal";
 
 interface CategoryCardProps {
   category: TCategory;
-  setSelectedCategoryId: (id: string | null) => void;
 }
 
-const CategoryCard = ({
-  category,
-  setSelectedCategoryId,
-}: CategoryCardProps) => {
-  const { categories, setCategories, tasks, setTasks } = useAppStore();
+const CategoryCard = ({ category }: CategoryCardProps) => {
+  const { categories, setCategories, tasks, setTasks, setSelectedCategoryId } =
+    useAppStore();
   const [isHandling, setIsHandling] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<TCategory | null>(

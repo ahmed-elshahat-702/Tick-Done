@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import CategoryCard from "@/app/(tasks)/categories/category-card";
 import { toast } from "sonner";
@@ -9,10 +9,13 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 
 const CategoryList = () => {
-  const { categories, error, isLoading } = useAppStore();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null
-  );
+  const {
+    categories,
+    error,
+    isLoading,
+    selectedCategoryId,
+    setSelectedCategoryId,
+  } = useAppStore();
 
   useEffect(() => {
     if (error) {
@@ -28,7 +31,7 @@ const CategoryList = () => {
         setSelectedCategoryId(defaultCategory._id);
       }
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories, selectedCategoryId, setSelectedCategoryId]);
 
   if (isLoading) {
     return (
@@ -76,10 +79,7 @@ const CategoryList = () => {
         ) : null}
         <div className="p-4">
           {selectedCategory ? (
-            <CategoryCard
-              category={selectedCategory}
-              setSelectedCategoryId={setSelectedCategoryId}
-            />
+            <CategoryCard category={selectedCategory} />
           ) : (
             <p className="text-muted-foreground text-sm">
               No categories yet. Start by adding one.
